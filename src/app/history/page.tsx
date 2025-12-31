@@ -298,17 +298,11 @@ export default function HistoryPage() {
                     </button>
                   </div>
 
-                  {/* 原始日记内容 - 情绪内容关键词回顾 */}
-                  <div className="mb-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-base">💭</span>
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">我当时在想什么？</p>
-                    </div>
-                    <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-                      <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-sm whitespace-pre-wrap">
-                        {record.content}
-                      </p>
-                    </div>
+                  {/* 原始日记内容 */}
+                  <div className="mb-4 bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                    <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-sm whitespace-pre-wrap">
+                      {record.content}
+                    </p>
                   </div>
 
                   <div className="flex flex-wrap gap-2 mb-4">
