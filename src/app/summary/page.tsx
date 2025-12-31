@@ -440,7 +440,7 @@ export default function SummaryPage() {
                     return `时间: ${label}`;
                   }}
                 />
-                <Legend />
+                <Legend verticalAlign="bottom" align="right" />
                 <Line 
                   type="monotone" 
                   dataKey="intensity" 
@@ -530,7 +530,7 @@ export default function SummaryPage() {
                     return `日期: ${label}`;
                   }}
                 />
-                <Legend />
+                <Legend verticalAlign="bottom" align="right" />
                 <Line 
                   type="monotone" 
                   dataKey="avg_intensity" 
