@@ -8,6 +8,18 @@ import {
 } from 'recharts';
 import MainLayout from '@/components/MainLayout';
 
+// 获取情绪标签的中文显示（统一格式：只显示第一个词）
+function getEmotionDisplayName(emotionTag: string): string {
+  const emotionTagInfo = Object.values(EMOTION_TAGS).find(
+    (tag) => tag.en === emotionTag
+  );
+  if (!emotionTagInfo) return emotionTag;
+  
+  // 只取第一个词（去掉"、"后面的部分）
+  const firstWord = emotionTagInfo.zh.split('、')[0];
+  return firstWord;
+}
+
 // 类型定义
 type MoodAnalysisResult = {
   keyWords: string[];
@@ -19,7 +31,7 @@ type MoodAnalysisResult = {
 type MoodRecord = {
   id: number;
   content: string;
-  role: 'mother' | 'teacher' | 'friend';
+  role: string; // 角色ID（固定角色或自定义角色）
   feedback: MoodAnalysisResult;
   createTime: string;
 };
@@ -103,16 +115,14 @@ export default function SummaryPage() {
 
     return dayRecords.map((record) => {
       const date = new Date(record.createTime);
-      const timeWindow = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+      // 包含秒，避免同一分钟内的记录重叠
+      const timeWindow = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
       const intensity = Math.abs(emotionIntensityMap[record.feedback.emotionTag] || 0);
-      const emotionTagInfo = Object.values(EMOTION_TAGS).find(
-        (tag) => tag.en === record.feedback.emotionTag
-      );
       
       return {
         timeWindow,
         intensity,
-        dominant_emotion: emotionTagInfo?.zh || record.feedback.emotionTag,
+        dominant_emotion: getEmotionDisplayName(record.feedback.emotionTag),
         emotionTag: record.feedback.emotionTag,
       };
     });
@@ -129,18 +139,22 @@ export default function SummaryPage() {
 
     const emotionCount: Record<string, number> = {};
     dayRecords.forEach((record) => {
-      const emotionTagInfo = Object.values(EMOTION_TAGS).find(
-        (tag) => tag.en === record.feedback.emotionTag
-      );
-      const emotionName = emotionTagInfo?.zh || record.feedback.emotionTag;
+      const emotionName = getEmotionDisplayName(record.feedback.emotionTag);
       emotionCount[emotionName] = (emotionCount[emotionName] || 0) + 1;
     });
 
-    return Object.entries(emotionCount).map(([name, value]) => ({
-      name,
-      value,
-      emotionTag: Object.values(EMOTION_TAGS).find(tag => tag.zh === name)?.en || name,
-    }));
+    return Object.entries(emotionCount).map(([name, value]) => {
+      // 根据显示名称反向查找对应的 emotionTag
+      const emotionTag = Object.values(EMOTION_TAGS).find(
+        tag => tag.zh.split('、')[0] === name
+      )?.en || name;
+      
+      return {
+        name,
+        value,
+        emotionTag,
+      };
+    });
   }, [history, selectedDate]);
 
   // 3️⃣ 周/月趋势
@@ -166,14 +180,13 @@ export default function SummaryPage() {
           emotionCount[record.feedback.emotionTag] = (emotionCount[record.feedback.emotionTag] || 0) + 1;
         });
         const dominantEmotion = Object.entries(emotionCount).sort((a, b) => b[1] - a[1])[0]?.[0] || 'neutral';
-        const dominantEmotionInfo = Object.values(EMOTION_TAGS).find(tag => tag.en === dominantEmotion);
         
         const date = new Date(dateStr);
         return {
           date: `${date.getMonth() + 1}/${date.getDate()}`,
           fullDate: date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }),
           avg_intensity: Math.round(avgIntensity * 10) / 10,
-          dominant_emotion: dominantEmotionInfo?.zh || dominantEmotion,
+          dominant_emotion: getEmotionDisplayName(dominantEmotion),
           dominant_emotion_tag: dominantEmotion,
         };
       });
@@ -226,10 +239,7 @@ export default function SummaryPage() {
 
     const emotionCount: Record<string, number> = {};
     periodRecords.forEach((record) => {
-      const emotionTagInfo = Object.values(EMOTION_TAGS).find(
-        (tag) => tag.en === record.feedback.emotionTag
-      );
-      const emotionName = emotionTagInfo?.zh || record.feedback.emotionTag;
+      const emotionName = getEmotionDisplayName(record.feedback.emotionTag);
       emotionCount[emotionName] = (emotionCount[emotionName] || 0) + 1;
     });
 

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { EMOTION_TAGS, type Role } from '@/lib/analyzeMood';
+import { EMOTION_TAGS } from '@/lib/analyzeMood';
+import { getRoleInfo, getRoleColor } from '@/lib/roleUtils';
 import MainLayout from '@/components/MainLayout';
 
 // 类型定义
@@ -16,7 +17,7 @@ type MoodAnalysisResult = {
 type MoodRecord = {
   id: number;
   content: string;
-  role: Role;
+  role: string; // 角色ID（固定角色或自定义角色）
   feedback: MoodAnalysisResult;
   createTime: string;
 };
@@ -25,7 +26,7 @@ type TimeFilter = '3days' | 'week' | 'month';
 
 export default function HistoryPage() {
   const [history, setHistory] = useState<MoodRecord[]>([]);
-  const [filterRole, setFilterRole] = useState<Role | 'all'>('all');
+  const [filterRole, setFilterRole] = useState<string>('all');
   const [filterEmotion, setFilterEmotion] = useState<string>('all');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('week');
   const router = useRouter();
@@ -34,30 +35,6 @@ export default function HistoryPage() {
     const savedHistory = JSON.parse(localStorage.getItem('mood_history') || '[]') as MoodRecord[];
     setHistory(savedHistory);
   }, []);
-
-  const roleNames = {
-    mother: '慈母',
-    teacher: '严师',
-    friend: '老友',
-  };
-
-  const roleEmojis = {
-    mother: '🤱',
-    teacher: '👨‍🏫',
-    friend: '👫',
-  };
-
-  const roleColors = {
-    mother: 'bg-pink-100 text-pink-700 border-pink-300',
-    teacher: 'bg-blue-100 text-blue-700 border-blue-300',
-    friend: 'bg-green-100 text-green-700 border-green-300',
-  };
-
-  const roleTextColors = {
-    mother: 'text-pink-600 dark:text-pink-400',
-    teacher: 'text-blue-600 dark:text-blue-400',
-    friend: 'text-green-600 dark:text-green-400',
-  };
 
   // 按时间筛选记录
   const timeFilteredHistory = useMemo(() => {
@@ -199,31 +176,21 @@ export default function HistoryPage() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 筛选角色
               </label>
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  onClick={() => setFilterRole('all')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    filterRole === 'all'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  全部
-                </button>
-                {(['mother', 'teacher', 'friend'] as Role[]).map((role) => (
-                  <button
-                    key={role}
-                    onClick={() => setFilterRole(role)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                      filterRole === role
-                        ? `${roleColors[role]} border-2`
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    {roleEmojis[role]} {roleNames[role]}
-                  </button>
-                ))}
-              </div>
+              <select
+                value={filterRole}
+                onChange={(e) => setFilterRole(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="all">全部角色</option>
+                {Array.from(new Set(history.map(r => r.role))).map((roleId) => {
+                  const roleInfo = getRoleInfo(roleId);
+                  return (
+                    <option key={roleId} value={roleId}>
+                      {roleInfo.emoji} {roleInfo.name}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
 
             {/* 情绪筛选 */}
@@ -273,6 +240,8 @@ export default function HistoryPage() {
                 (tag) => tag.en === record.feedback.emotionTag
               );
               const emotionTagZh = emotionTagInfo ? emotionTagInfo.zh : record.feedback.emotionTag;
+              const roleInfo = getRoleInfo(record.role);
+              const roleColors = getRoleColor(record.role);
 
               return (
                 <div
@@ -281,12 +250,21 @@ export default function HistoryPage() {
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">{roleEmojis[record.role]}</span>
+                      <span className="text-2xl">{roleInfo.emoji}</span>
                       <div>
-                        <p className={`font-semibold ${roleTextColors[record.role] || 'text-gray-700 dark:text-gray-300'}`}>
-                          {roleNames[record.role] || '未知'}的回应
+                        <p className={`font-semibold ${roleColors.text}`}>
+                          {roleInfo.name}的回应
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{record.createTime}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {new Date(record.createTime).toLocaleString('zh-CN', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                          })}
+                        </p>
                       </div>
                     </div>
                     <button

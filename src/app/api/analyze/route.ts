@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { analyzeMood, analyzeMoodStream, type MoodAnalysisResult, type Role } from '@/lib/analyzeMood';
+import { analyzeMood, analyzeMoodStream, type MoodAnalysisResult, type Role, type CustomRole } from '@/lib/analyzeMood';
 
 /**
  * POST /api/analyze
@@ -7,27 +7,36 @@ import { analyzeMood, analyzeMoodStream, type MoodAnalysisResult, type Role } fr
  * 
  * 请求体：
  * {
- *   "content": "日记内容",
- *   "role": "mother" | "teacher" | "friend", // 角色选择
+ *   "content": "日记内容或心情图标",
+ *   "role": "固定角色ID或自定义角色ID",
+ *   "customRoles": [可选] 自定义角色列表
  *   "stream": false // 可选，是否使用流式输出
  * }
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { content, role, stream } = body;
+    const { content, role, customRoles, stream } = body;
 
     // 参数验证
     if (!content || typeof content !== 'string') {
       return NextResponse.json(
-        { error: '缺少必需的参数：content（日记内容）' },
+        { error: '缺少必需的参数：content（日记内容或心情图标）' },
         { status: 400 }
       );
     }
 
-    if (!role || !['mother', 'teacher', 'friend'].includes(role)) {
+    if (!role || typeof role !== 'string') {
       return NextResponse.json(
-        { error: '缺少必需的参数：role（角色选择），必须是 mother、teacher 或 friend' },
+        { error: '缺少必需的参数：role（角色选择）' },
+        { status: 400 }
+      );
+    }
+
+    // 验证自定义角色格式
+    if (customRoles && !Array.isArray(customRoles)) {
+      return NextResponse.json(
+        { error: 'customRoles 必须是数组格式' },
         { status: 400 }
       );
     }
@@ -38,7 +47,7 @@ export async function POST(request: NextRequest) {
       const readableStream = new ReadableStream({
         async start(controller) {
           try {
-            const generator = analyzeMoodStream(content, role as Role);
+            const generator = analyzeMoodStream(content, role as Role, customRoles as CustomRole[]);
             
             // 使用 while 循环来正确处理 generator
             let result = await generator.next();
@@ -77,7 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 非流式输出
-    const result = await analyzeMood(content, role as Role);
+    const result = await analyzeMood(content, role as Role, customRoles as CustomRole[]);
     return NextResponse.json(result);
   } catch (error) {
     console.error('分析情绪失败：', error);
