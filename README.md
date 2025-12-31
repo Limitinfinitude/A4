@@ -17,16 +17,21 @@ Mood-Mirror 是一个现代化的情绪日记应用，结合了 AI 分析和数�
 
 <div align="center">
   <img src="screenshots/1.png" alt="首页 - 记录心情" width="800" />
-  <p><em>首页 - 记录心情</em></p>
+  <p><em>首页 - 文字记录心情</em></p>
 </div>
 
 <div align="center">
-  <img src="screenshots/2.png" alt="历史记录与数据可视化" width="800" />
+  <img src="screenshots/2.png" alt="首页 - 心情图标" width="800" />
+  <p><em>首页 - 图标记录心情</em></p>
+</div>
+
+<div align="center">
+  <img src="screenshots/3.png" alt="历史记录与数据可视化" width="800" />
   <p><em>历史记录与数据可视化</em></p>
 </div>
 
 <div align="center">
-  <img src="screenshots/3.png" alt="AI 总结与趋势分析" width="800" />
+  <img src="screenshots/4.png" alt="AI 总结与趋势分析" width="800" />
   <p><em>AI 总结与趋势分析</em></p>
 </div>
 
