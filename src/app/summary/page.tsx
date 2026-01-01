@@ -568,7 +568,11 @@ export default function SummaryPage() {
                     border: '1px solid #e5e7eb',
                     borderRadius: '8px',
                   }}
-                  formatter={(value: number) => [`强度: ${value}`, '']}
+                  formatter={(value) => {
+                    if (value == null) return ['强度: -', '']
+                    return [`强度: ${value}`, '']
+                  }}
+                  
                   labelFormatter={(label, payload) => {
                     if (payload && payload[0]) {
                       return `时间: ${label} | 主导情绪: ${payload[0].payload.dominant_emotion}`;
