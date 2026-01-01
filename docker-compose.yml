@@ -1,0 +1,10 @@
+services:
+  mood-mirror:
+    build: .
+    image: mood-mirror:latest
+    container_name: mood-mirror
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
