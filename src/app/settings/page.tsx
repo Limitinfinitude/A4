@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import MainLayout from '@/components/MainLayout';
 import { getCustomRoles } from '@/lib/customRoles';
@@ -39,18 +39,31 @@ export default function SettingsPage() {
   const [exportFormat, setExportFormat] = useState<'json' | 'markdown'>('json');
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [importMessage, setImportMessage] = useState('');
+  const [history, setHistory] = useState<MoodRecord[]>([]);
+  const [customRoles, setCustomRoles] = useState<Array<{ id: string; name: string; description: string }>>([]);
+
+  // 在客户端挂载后读取数据
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedHistory = JSON.parse(localStorage.getItem('mood_history') || '[]') as MoodRecord[];
+      const savedCustomRoles = getCustomRoles();
+      setHistory(savedHistory);
+      setCustomRoles(savedCustomRoles);
+    }
+  }, []);
 
   // 导出为 JSON
   const handleExportJSON = () => {
+    if (typeof window === 'undefined') return;
     try {
-      const history = JSON.parse(localStorage.getItem('mood_history') || '[]') as MoodRecord[];
-      const customRoles = getCustomRoles();
+      const currentHistory = JSON.parse(localStorage.getItem('mood_history') || '[]') as MoodRecord[];
+      const currentCustomRoles = getCustomRoles();
 
       const backupData: BackupData = {
         version: '1.0.0',
         exportTime: new Date().toISOString(),
-        moodHistory: history,
-        customRoles: customRoles,
+        moodHistory: currentHistory,
+        customRoles: currentCustomRoles,
       };
 
       const dataStr = JSON.stringify(backupData, null, 2);
@@ -70,20 +83,21 @@ export default function SettingsPage() {
 
   // 导出为 Markdown
   const handleExportMarkdown = () => {
+    if (typeof window === 'undefined') return;
     try {
-      const history = JSON.parse(localStorage.getItem('mood_history') || '[]') as MoodRecord[];
-      const customRoles = getCustomRoles();
+      const currentHistory = JSON.parse(localStorage.getItem('mood_history') || '[]') as MoodRecord[];
+      const currentCustomRoles = getCustomRoles();
 
       let markdown = `# Mood Mirror 数据备份\n\n`;
       markdown += `**导出时间**：${new Date().toLocaleString('zh-CN')}\n\n`;
-      markdown += `**记录总数**：${history.length}\n`;
-      markdown += `**自定义角色数**：${customRoles.length}\n\n`;
+      markdown += `**记录总数**：${currentHistory.length}\n`;
+      markdown += `**自定义角色数**：${currentCustomRoles.length}\n\n`;
       markdown += `---\n\n`;
 
       // 自定义角色
-      if (customRoles.length > 0) {
+      if (currentCustomRoles.length > 0) {
         markdown += `## 自定义角色\n\n`;
-        customRoles.forEach((role) => {
+        currentCustomRoles.forEach((role) => {
           markdown += `### ${role.name}\n\n`;
           markdown += `- **ID**：\`${role.id}\`\n`;
           markdown += `- **描述**：${role.description}\n\n`;
@@ -93,7 +107,7 @@ export default function SettingsPage() {
 
       // 情绪记录
       markdown += `## 情绪记录\n\n`;
-      history.forEach((record, index) => {
+      currentHistory.forEach((record, index) => {
         const date = new Date(record.createTime);
         const roleInfo = record.roleSnapshot || { name: '未知角色', emoji: '❓' };
         
@@ -159,10 +173,15 @@ export default function SettingsPage() {
         }
 
         // 导入数据
-        localStorage.setItem('mood_history', JSON.stringify(backupData.moodHistory));
-        
-        if (backupData.customRoles && backupData.customRoles.length > 0) {
-          localStorage.setItem('mood_custom_roles', JSON.stringify(backupData.customRoles));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('mood_history', JSON.stringify(backupData.moodHistory));
+          
+          if (backupData.customRoles && backupData.customRoles.length > 0) {
+            localStorage.setItem('mood_custom_roles', JSON.stringify(backupData.customRoles));
+          }
+
+          setHistory(backupData.moodHistory);
+          setCustomRoles(backupData.customRoles);
         }
 
         setImportStatus('success');
@@ -172,9 +191,11 @@ export default function SettingsPage() {
         event.target.value = '';
         
         // 2秒后刷新页面
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
+        if (typeof window !== 'undefined') {
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+        }
       } catch (error) {
         setImportStatus('error');
         setImportMessage('导入失败：' + (error as Error).message);
@@ -187,19 +208,19 @@ export default function SettingsPage() {
 
   // 清空所有数据
   const handleClearAll = () => {
+    if (typeof window === 'undefined') return;
     if (confirm('⚠️ 警告：此操作将删除所有数据，包括情绪记录和自定义角色，且无法恢复！\n\n确定要继续吗？')) {
       localStorage.removeItem('mood_history');
       localStorage.removeItem('mood_custom_roles');
       localStorage.removeItem('mood_draft');
       localStorage.removeItem('mood_draft_icon');
       localStorage.removeItem('mood_draft_mode');
+      setHistory([]);
+      setCustomRoles([]);
       alert('所有数据已清空');
       router.push('/');
     }
   };
-
-  const history = JSON.parse(localStorage.getItem('mood_history') || '[]') as MoodRecord[];
-  const customRoles = getCustomRoles();
 
   return (
     <MainLayout>
