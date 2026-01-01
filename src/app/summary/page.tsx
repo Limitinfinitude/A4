@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { EMOTION_TAGS } from '@/lib/analyzeMood';
+import { getRoleInfo } from '@/lib/roleUtils';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
   PieChart, Pie, Cell
@@ -34,6 +35,7 @@ type MoodRecord = {
   role: string; // 角色ID（固定角色或自定义角色）
   feedback: MoodAnalysisResult;
   createTime: string;
+  originalEmotionTag?: string; // 原始情绪标签（用户修正前）
 };
 
 type ViewMode = 'daily' | 'overview' | 'trend';
@@ -42,7 +44,8 @@ export default function SummaryPage() {
   const [history, setHistory] = useState<MoodRecord[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('daily');
   const [selectedDate, setSelectedDate] = useState<string>('');
-  const [summaryPeriod, setSummaryPeriod] = useState<'week' | 'month'>('week');
+  const [summaryPeriod, setSummaryPeriod] = useState<'recent' | 'week' | 'month'>('recent');
+  const [recentSummary, setRecentSummary] = useState<string>('');
   const [weekSummary, setWeekSummary] = useState<string>('');
   const [monthSummary, setMonthSummary] = useState<string>('');
   const [summaryLoading, setSummaryLoading] = useState(false);
@@ -220,11 +223,13 @@ export default function SummaryPage() {
   };
 
   // 计算统计数据
-  const calculateSummaryData = (period: 'week' | 'month') => {
+  const calculateSummaryData = (period: 'recent' | 'week' | 'month') => {
     const now = new Date();
     let startDate: Date;
     
-    if (period === 'week') {
+    if (period === 'recent') {
+      startDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+    } else if (period === 'week') {
       startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     } else {
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -291,6 +296,115 @@ export default function SummaryPage() {
     const contentKeywords = extractContentKeywords(contents);
     const sampleContents = contents.slice(0, 5);
 
+    // === 闭环数据计算 ===
+
+    // 1. 周期对比数据
+    let comparison = undefined;
+    let prevStartDate: Date;
+    let prevEndDate: Date;
+    
+    if (period === 'recent') {
+      prevEndDate = new Date(startDate.getTime() - 1);
+      prevStartDate = new Date(prevEndDate.getTime() - 3 * 24 * 60 * 60 * 1000);
+    } else if (period === 'week') {
+      prevEndDate = new Date(startDate.getTime() - 1);
+      prevStartDate = new Date(prevEndDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+    } else {
+      prevEndDate = new Date(now.getFullYear(), now.getMonth(), 0); // 上月最后一天
+      prevStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1); // 上月第一天
+    }
+
+    const prevRecords = history.filter((record) => {
+      const recordDate = new Date(record.createTime);
+      return recordDate >= prevStartDate && recordDate <= prevEndDate;
+    });
+
+    if (prevRecords.length > 0) {
+      const prevEmotionCount: Record<string, number> = {};
+      prevRecords.forEach((record) => {
+        const emotionName = getEmotionDisplayName(record.feedback.emotionTag);
+        prevEmotionCount[emotionName] = (prevEmotionCount[emotionName] || 0) + 1;
+      });
+      const prevDominantEmotion = Object.entries(prevEmotionCount).sort((a, b) => b[1] - a[1])[0];
+      const prevIntensities = prevRecords.map((r) => Math.abs(emotionIntensityMap[r.feedback.emotionTag] || 0));
+      const prevAvgIntensity = prevIntensities.reduce((a, b) => a + b, 0) / prevIntensities.length;
+      
+      const prevNegativeCount = prevRecords.filter(r => negativeEmotions.includes(r.feedback.emotionTag)).length;
+      const prevNegativeRate = (prevNegativeCount / prevRecords.length) * 100;
+      const currentNegativeCount = weekdayNegativeCount + weekendNegativeCount;
+      const currentNegativeRate = (currentNegativeCount / periodRecords.length) * 100;
+
+      comparison = {
+        prev_total_records: prevRecords.length,
+        prev_dominant_emotion: prevDominantEmotion[0],
+        prev_avg_intensity: prevAvgIntensity,
+        prev_negative_rate: prevNegativeRate,
+        records_change: prevRecords.length > 0 ? ((periodRecords.length - prevRecords.length) / prevRecords.length) * 100 : 0,
+        intensity_change: avgIntensity - prevAvgIntensity,
+        negative_rate_change: currentNegativeRate - prevNegativeRate,
+      };
+    }
+
+    // 2. 角色偏好数据
+    const roleCount: Record<string, number> = {};
+    const emotionRoleMap: Record<string, Record<string, number>> = {};
+    
+    periodRecords.forEach((record) => {
+      if (record.role && record.role !== 'quote') {
+        const roleInfo = getRoleInfo(record.role);
+        const roleName = roleInfo.name;
+        roleCount[roleName] = (roleCount[roleName] || 0) + 1;
+        
+        // 统计情绪-角色关联
+        const emotionName = getEmotionDisplayName(record.feedback.emotionTag);
+        if (!emotionRoleMap[emotionName]) emotionRoleMap[emotionName] = {};
+        emotionRoleMap[emotionName][roleName] = (emotionRoleMap[emotionName][roleName] || 0) + 1;
+      }
+    });
+
+    let rolePreference = undefined;
+    const roleEntries = Object.entries(roleCount).sort((a, b) => b[1] - a[1]);
+    if (roleEntries.length > 0) {
+      // 找出每种情绪最偏好的角色
+      const emotionRolePattern: { emotion: string; preferred_role: string }[] = [];
+      Object.entries(emotionRoleMap).forEach(([emotion, roles]) => {
+        const sortedRoles = Object.entries(roles).sort((a, b) => b[1] - a[1]);
+        if (sortedRoles.length > 0 && sortedRoles[0][1] >= 2) { // 至少选择2次才算偏好
+          emotionRolePattern.push({ emotion, preferred_role: sortedRoles[0][0] });
+        }
+      });
+
+      rolePreference = {
+        most_used_role: roleEntries[0][0],
+        most_used_role_count: roleEntries[0][1],
+        role_distribution: roleCount,
+        emotion_role_pattern: emotionRolePattern.length > 0 ? emotionRolePattern : undefined,
+      };
+    }
+
+    // 3. 情绪修正数据
+    const correctionMap: Record<string, number> = {};
+    periodRecords.forEach((record) => {
+      if (record.originalEmotionTag && record.originalEmotionTag !== record.feedback.emotionTag) {
+        const fromName = getEmotionDisplayName(record.originalEmotionTag);
+        const toName = getEmotionDisplayName(record.feedback.emotionTag);
+        const key = `${fromName}→${toName}`;
+        correctionMap[key] = (correctionMap[key] || 0) + 1;
+      }
+    });
+
+    let emotionCorrection = undefined;
+    const correctionEntries = Object.entries(correctionMap).sort((a, b) => b[1] - a[1]);
+    if (correctionEntries.length > 0) {
+      emotionCorrection = {
+        total_corrections: correctionEntries.reduce((sum, [, count]) => sum + count, 0),
+        correction_patterns: correctionEntries.slice(0, 5).map(([key, count]) => {
+          const [from, to] = key.split('→');
+          return { from, to, count };
+        }),
+      };
+    }
+
     return {
       period,
       dominant_emotion: dominantEmotion[0],
@@ -305,15 +419,25 @@ export default function SummaryPage() {
       weekend_total: weekendTotal,
       content_keywords: contentKeywords,
       sample_contents: sampleContents,
+      // 闭环数据
+      comparison,
+      rolePreference,
+      emotionCorrection,
     };
   };
 
+  const recentSummaryData = useMemo(() => calculateSummaryData('recent'), [history, emotionIntensityMap]);
   const weekSummaryData = useMemo(() => calculateSummaryData('week'), [history, emotionIntensityMap]);
   const monthSummaryData = useMemo(() => calculateSummaryData('month'), [history, emotionIntensityMap]);
 
   // 生成 AI 总结
   const handleGenerateSummary = async () => {
-    const summaryData = summaryPeriod === 'week' ? weekSummaryData : monthSummaryData;
+    const summaryDataMap = {
+      recent: recentSummaryData,
+      week: weekSummaryData,
+      month: monthSummaryData,
+    };
+    const summaryData = summaryDataMap[summaryPeriod];
     if (!summaryData) return;
 
     setSummaryLoading(true);
@@ -330,7 +454,9 @@ export default function SummaryPage() {
       }
 
       const data = await res.json();
-      if (summaryPeriod === 'week') {
+      if (summaryPeriod === 'recent') {
+        setRecentSummary(data.summary);
+      } else if (summaryPeriod === 'week') {
         setWeekSummary(data.summary);
       } else {
         setMonthSummary(data.summary);
@@ -564,16 +690,28 @@ export default function SummaryPage() {
         )}
 
         {/* AI 总结卡片 */}
-        {((summaryPeriod === 'week' && weekSummaryData && weekSummaryData.total_records > 0) ||
+        {((summaryPeriod === 'recent' && recentSummaryData && recentSummaryData.total_records > 0) ||
+          (summaryPeriod === 'week' && weekSummaryData && weekSummaryData.total_records > 0) ||
           (summaryPeriod === 'month' && monthSummaryData && monthSummaryData.total_records > 0)) && (
           <div className="bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 dark:from-purple-900/30 dark:via-pink-900/30 dark:to-blue-900/30 rounded-2xl shadow-xl p-6 mb-6 border-2 border-purple-200 dark:border-purple-700">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <div className="flex items-center gap-3 flex-wrap">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <span className="text-2xl">✨</span>
-                  情绪总结
+                  AI 洞察
                 </h2>
                 <div className="flex gap-2">
+                  <button
+                    onClick={() => setSummaryPeriod('recent')}
+                    disabled={summaryLoading}
+                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${
+                      summaryPeriod === 'recent'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-white/60 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 hover:bg-white/80 dark:hover:bg-gray-800/80'
+                    }`}
+                  >
+                    近3天
+                  </button>
                   <button
                     onClick={() => setSummaryPeriod('week')}
                     disabled={summaryLoading}
@@ -604,21 +742,23 @@ export default function SummaryPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  AI 正在分析...
+                  AI 正在洞察...
                 </div>
               )}
             </div>
             
-            {((summaryPeriod === 'week' && weekSummary) || (summaryPeriod === 'month' && monthSummary)) ? (
+            {((summaryPeriod === 'recent' && recentSummary) || (summaryPeriod === 'week' && weekSummary) || (summaryPeriod === 'month' && monthSummary)) ? (
               <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-white/50 dark:border-gray-700/50">
                 <p className="text-gray-800 dark:text-gray-200 leading-relaxed text-base whitespace-pre-line">
-                  {summaryPeriod === 'week' ? weekSummary : monthSummary}
+                  {summaryPeriod === 'recent' ? recentSummary : summaryPeriod === 'week' ? weekSummary : monthSummary}
                 </p>
               </div>
             ) : (
               <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-white/50 dark:border-gray-700/50 text-center">
                 <p className="text-gray-600 dark:text-gray-400 mb-3">
-                  {summaryPeriod === 'week' 
+                  {summaryPeriod === 'recent' 
+                    ? `近3天共有 ${recentSummaryData?.total_records || 0} 条记录`
+                    : summaryPeriod === 'week' 
                     ? `本周共有 ${weekSummaryData?.total_records || 0} 条记录`
                     : `本月共有 ${monthSummaryData?.total_records || 0} 条记录`}
                 </p>
@@ -627,18 +767,20 @@ export default function SummaryPage() {
                   disabled={summaryLoading}
                   className="px-6 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors disabled:opacity-50"
                 >
-                  {summaryLoading ? '生成中...' : `生成${summaryPeriod === 'week' ? '本周' : '本月'}总结`}
+                  {summaryLoading ? '洞察中...' : `生成${summaryPeriod === 'recent' ? '近期' : summaryPeriod === 'week' ? '本周' : '本月'}洞察`}
                 </button>
               </div>
             )}
 
             <div className="mt-4 flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
               <span>
-                基于 {summaryPeriod === 'week' 
+                基于 {summaryPeriod === 'recent' 
+                  ? (recentSummaryData?.total_records || 0)
+                  : summaryPeriod === 'week' 
                   ? (weekSummaryData?.total_records || 0)
                   : (monthSummaryData?.total_records || 0)} 条记录分析
               </span>
-              {((summaryPeriod === 'week' && weekSummary) || (summaryPeriod === 'month' && monthSummary)) && (
+              {((summaryPeriod === 'recent' && recentSummary) || (summaryPeriod === 'week' && weekSummary) || (summaryPeriod === 'month' && monthSummary)) && (
                 <button
                   onClick={handleGenerateSummary}
                   disabled={summaryLoading}

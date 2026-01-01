@@ -133,7 +133,7 @@ export default function FeedbackPage() {
             {/* 治愈系金句 */}
             {feedback.slogan && (
               <div className="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 rounded-2xl shadow-xl p-6 sm:p-8 mb-6 border border-purple-200 dark:border-purple-700 text-center">
-                <p className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-3">✨ 治愈系金句</p>
+                <p className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-3">✨ 一记一句</p>
                 <p className="text-xl font-bold text-purple-700 dark:text-purple-300 leading-relaxed">
                   {feedback.slogan}
                 </p>

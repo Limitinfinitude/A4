@@ -50,47 +50,78 @@ export interface MoodAnalysisResult {
   slogan: string;
 }
 
-// 固定角色定义
-export const FIXED_ROLES: Record<FixedRole, { name: string; description: string; emoji: string }> = {
+// 固定角色定义 - 每个角色关注不同的认知维度
+export const FIXED_ROLES: Record<FixedRole, { 
+  name: string; 
+  emoji: string;
+  description: string;  // 简短描述（用于 UI）
+  focusDimension: string;  // 关注的认知维度
+  coreQuestion: string;  // 核心提问
+  responseStyle: string;  // 回应风格
+}> = {
   warm_mother: {
     name: '暖心慈母',
-    description: '情感兜底，包容接纳。温柔、共情、鼓励，像家人一样给予安全感，不评判对错',
     emoji: '🤱',
+    description: '关注你的情感需求，给予无条件的接纳',
+    focusDimension: '情感需求',
+    coreQuestion: '你内心真正需要的是什么？在这件事里，你渴望被怎样对待？',
+    responseStyle: '温柔共情，先看见情绪本身，再轻轻触碰背后的需求。不评判对错，只关心"你还好吗"。',
   },
   rational_teacher: {
     name: '理性严师',
-    description: '客观分析，精准提效。一针见血、逻辑清晰，指出情绪背后的问题并给可执行建议',
     emoji: '👨‍🏫',
+    description: '关注问题结构，帮你理清思路',
+    focusDimension: '问题结构',
+    coreQuestion: '这个情绪的来源是什么？可以拆解成哪几个部分？哪个是你能控制的？',
+    responseStyle: '客观冷静，帮用户看清情绪背后的逻辑链条。不煽情，用"事实-原因-可控点"的框架回应。',
   },
   funny_friend: {
     name: '损友搭子',
-    description: '吐槽解压，轻松破防。口语化、接地气、带点小调侃，用玩笑化解负面情绪',
     emoji: '😄',
+    description: '关注情绪释放，帮你卸下包袱',
+    focusDimension: '情绪释放',
+    coreQuestion: '这事儿真有那么严重吗？换个角度看，是不是也挺好笑的？',
+    responseStyle: '口语化、接地气，用轻松的视角消解沉重感。可以适度调侃，但不是嘲笑。目标是让用户笑出来或者至少"破防"。',
   },
   study_partner: {
     name: '学习伙伴',
-    description: '适配学习场景，并肩同行。懂学习痛点，反馈结合「学习方法 + 心态调整」，不喊空洞口号',
     emoji: '📚',
+    description: '关注学习体验，理解你的困境',
+    focusDimension: '学习体验',
+    coreQuestion: '这个学习/考试/任务让你感到困难的点是什么？是方法问题还是心态问题？',
+    responseStyle: '像一个懂学习痛点的同路人，既理解焦虑，又能给出具体的视角。不喊空洞口号，关注"怎么学得下去"。',
   },
   work_mentor: {
     name: '职场前辈',
-    description: '聚焦工作 / 日程管理。经验型、务实派，从「任务拆解 / 时间分配」角度疏导情绪',
     emoji: '💼',
+    description: '关注行动方案，帮你理顺优先级',
+    focusDimension: '行动方案',
+    coreQuestion: '接下来最重要的一步是什么？时间和精力应该怎么分配？',
+    responseStyle: '务实派，把情绪问题转化为"下一步做什么"。关注资源分配、优先级排序，帮用户从情绪漩涡里拔出来。',
   },
   listener: {
     name: '树洞倾听者',
-    description: '纯倾听，无评判。不输出建议，只温柔回应、复述用户的情绪点，让用户感受到「被听见」',
     emoji: '🌳',
+    description: '关注被看见的需求，不评判只倾听',
+    focusDimension: '被看见',
+    coreQuestion: '（不提问，只复述和确认）你是说...？听起来你感到...？',
+    responseStyle: '纯粹的倾听和复述。不分析、不建议、不评判。用"我听到了"、"你的感受是..."让用户感到被接住。',
   },
   growth_coach: {
     name: '成长教练',
-    description: '聚焦自我成长，激发内驱力。积极正向、聚焦长期，引导用户从情绪中提炼成长点',
     emoji: '🌟',
+    description: '关注长期视角，从经历中提炼成长',
+    focusDimension: '长期视角',
+    coreQuestion: '五年后回看这件事，它教会了你什么？这个经历如何让你变得更完整？',
+    responseStyle: '积极但不鸡汤，聚焦"这件事对你的意义"。帮用户从当下的情绪中拉出来，看到更长的时间线。',
   },
   zen_master: {
     name: '禅意居士',
-    description: '佛系开导，缓解内耗。温和、佛系，强调「顺其自然」，帮用户放下执念',
     emoji: '🧘',
+    description: '关注执念松绑，帮你放下内耗',
+    focusDimension: '执念松绑',
+    coreQuestion: '这件事真的有你以为的那么重要吗？如果放下这个念头，会发生什么？',
+    responseStyle: '温和、佛系，帮用户看见自己的"执念"。不是让用户躺平，而是帮他们从"非做不可"的紧绷中松一口气。',
   },
 };
 
@@ -108,23 +139,36 @@ function getOpenAIClient() {
 /**
  * 获取角色信息（固定角色或自定义角色）
  */
-function getRoleInfo(role: Role, customRoles?: CustomRole[]): { name: string; description: string } {
+function getRoleInfo(role: Role, customRoles?: CustomRole[]): { 
+  name: string; 
+  focusDimension: string;
+  coreQuestion: string;
+  responseStyle: string;
+  isCustom: boolean;
+} {
   // 检查是否是固定角色
   if (role in FIXED_ROLES) {
     const fixedRole = role as FixedRole;
+    const roleData = FIXED_ROLES[fixedRole];
     return {
-      name: FIXED_ROLES[fixedRole].name,
-      description: FIXED_ROLES[fixedRole].description,
+      name: roleData.name,
+      focusDimension: roleData.focusDimension,
+      coreQuestion: roleData.coreQuestion,
+      responseStyle: roleData.responseStyle,
+      isCustom: false,
     };
   }
   
-  // 检查是否是自定义角色
+  // 检查是否是自定义角色（自定义角色使用通用维度）
   if (customRoles) {
     const customRole = customRoles.find(r => r.id === role);
     if (customRole) {
       return {
         name: customRole.name,
-        description: customRole.description,
+        focusDimension: '用户自定义',
+        coreQuestion: '根据角色设定回应用户',
+        responseStyle: customRole.description,
+        isCustom: true,
       };
     }
   }
@@ -157,44 +201,58 @@ export async function analyzeMood(
       .map(tag => `${tag.en} - ${tag.zh}`)
       .join('、');
 
+    // 构建角色 prompt 部分
+    const rolePromptSection = roleInfo.isCustom
+      ? `## 角色设定（自定义角色）
+- 角色名称：${roleInfo.name}
+- 回应风格：${roleInfo.responseStyle}
+- 请根据以上设定生成反馈`
+      : `## 角色设定（认知维度差异化）
+- 角色名称：${roleInfo.name}
+- 关注维度：${roleInfo.focusDimension}
+- 核心视角：${roleInfo.coreQuestion}
+- 回应风格：${roleInfo.responseStyle}
+
+【重要】不同角色的本质区别不是语气，而是**关注的维度**。
+你要从「${roleInfo.focusDimension}」这个维度去理解用户的情绪，
+用「${roleInfo.coreQuestion}」这个视角去回应。`;
+
     // 规整的 prompt
     const prompt = `你是一位专业的情绪分析师。请分析以下用户输入的情绪内容，并按照要求输出JSON格式的结果。
 
-用户输入：${content}
+## 用户输入
+${content}
 
-请完成以下任务：
+## 任务
 
-1. 提取1-2个潜意识情绪关键词
-   - 这些关键词应该反映用户输入中隐含的、未直接表达的情绪
-   - 例如：「隐藏的疲惫」「深层的焦虑」「被压抑的愤怒」等
-   - 如果用户只选择了心情图标，请根据图标推测可能的情绪关键词
+### 1. 提取潜意识情绪关键词（1-2个）
+- 反映用户输入中隐含的、未直接表达的情绪
+- 例如：「隐藏的疲惫」「深层的焦虑」「被压抑的愤怒」
+- 如果用户只选择了心情图标，请根据图标推测可能的情绪关键词
 
-2. 分析情绪标签
-   - 从以下12种情绪标签中选择最符合的一个（必须选择且只能选择一个）：
-   - 正向情绪：joy（快乐、开心）、satisfaction（满足、认可）、calm（平静、放松）、hope（希望、期待）
-   - 负向情绪：sadness（伤心、低落）、anger（愤怒、生气）、anxiety（焦虑、紧张）、fear（恐惧、不安）、frustration（挫败、无力）、tired（疲惫、累）
-   - 中性/特殊：surprise（惊讶）、neutral（中性、平静无波）
+### 2. 分析情绪标签（必须选择1个）
+- 正向：joy（快乐）、satisfaction（满足）、calm（平静）、hope（希望）
+- 负向：sadness（伤心）、anger（愤怒）、anxiety（焦虑）、fear（恐惧）、frustration（挫败）、tired（疲惫）
+- 中性：surprise（惊讶）、neutral（中性）
 
-3. 生成角色反馈
-   - 角色名称：${roleInfo.name}
-   - 角色设定：${roleInfo.description}
-   - 请严格按照角色设定生成反馈（30-50字）
-   - 反馈要求：
-     * 必须符合角色的定位和风格
-     * 基于用户输入提供个性化、有针对性的回应
-     * 不要使用外部数据或通用模板
-     * 不要输出建议（除非角色设定明确要求提供建议）
+${rolePromptSection}
 
-4. 生成治愈系金句
-   - 生成1句能够给予温暖和力量的话语
-   - 与用户当前情绪状态相关
+### 3. 生成角色反馈（60-100字）
+- 从「${roleInfo.focusDimension}」维度回应用户
+- 不是泛泛而谈，而是针对这个具体输入
+- 回应要体现这个角色独特的"看问题的角度"
+- 可以分2-3个层次展开，让用户感到被理解和陪伴
 
-请严格按照以下JSON格式输出，不要包含任何其他文字或markdown格式：
+### 4. 生成一记一句（1句）
+- 与用户当前情绪状态相关
+- 简短有力，给予温暖或力量
+
+## 输出格式（严格JSON，无其他文字）
 {
   "keyWords": ["关键词1", "关键词2"],
-  "emotionTag": "选择的情绪标签（如：joy、anxiety等）",
-  "feedback": "${roleInfo.name}视角的反馈内容，30-50字",
-  "slogan": "治愈系金句"
+  "emotionTag": "情绪标签（如：joy、anxiety）",
+  "feedback": "${roleInfo.name}从「${roleInfo.focusDimension}」维度的回应，60-100字",
+  "slogan": "一记一句"
 }`;
 
     if (stream) {
@@ -341,48 +399,59 @@ export async function* analyzeMoodStream(
   }
 
   const roleInfo = getRoleInfo(role, customRoles);
-  const emotionTagList = Object.values(EMOTION_TAGS)
-    .map(tag => `${tag.en} - ${tag.zh}`)
-    .join('、');
+
+  // 构建角色 prompt 部分
+  const rolePromptSection = roleInfo.isCustom
+    ? `## 角色设定（自定义角色）
+- 角色名称：${roleInfo.name}
+- 回应风格：${roleInfo.responseStyle}
+- 请根据以上设定生成反馈`
+    : `## 角色设定（认知维度差异化）
+- 角色名称：${roleInfo.name}
+- 关注维度：${roleInfo.focusDimension}
+- 核心视角：${roleInfo.coreQuestion}
+- 回应风格：${roleInfo.responseStyle}
+
+【重要】不同角色的本质区别不是语气，而是**关注的维度**。
+你要从「${roleInfo.focusDimension}」这个维度去理解用户的情绪，
+用「${roleInfo.coreQuestion}」这个视角去回应。`;
 
   // 规整的 prompt（与 analyzeMood 保持一致）
   const prompt = `你是一位专业的情绪分析师。请分析以下用户输入的情绪内容，并按照要求输出JSON格式的结果。
 
-用户输入：${content}
+## 用户输入
+${content}
 
-请完成以下任务：
+## 任务
 
-1. 提取1-2个潜意识情绪关键词
-   - 这些关键词应该反映用户输入中隐含的、未直接表达的情绪
-   - 例如：「隐藏的疲惫」「深层的焦虑」「被压抑的愤怒」等
-   - 如果用户只选择了心情图标，请根据图标推测可能的情绪关键词
+### 1. 提取潜意识情绪关键词（1-2个）
+- 反映用户输入中隐含的、未直接表达的情绪
+- 例如：「隐藏的疲惫」「深层的焦虑」「被压抑的愤怒」
+- 如果用户只选择了心情图标，请根据图标推测可能的情绪关键词
 
-2. 分析情绪标签
-   - 从以下12种情绪标签中选择最符合的一个（必须选择且只能选择一个）：
-   - 正向情绪：joy（快乐、开心）、satisfaction（满足、认可）、calm（平静、放松）、hope（希望、期待）
-   - 负向情绪：sadness（伤心、低落）、anger（愤怒、生气）、anxiety（焦虑、紧张）、fear（恐惧、不安）、frustration（挫败、无力）、tired（疲惫、累）
-   - 中性/特殊：surprise（惊讶）、neutral（中性、平静无波）
+### 2. 分析情绪标签（必须选择1个）
+- 正向：joy（快乐）、satisfaction（满足）、calm（平静）、hope（希望）
+- 负向：sadness（伤心）、anger（愤怒）、anxiety（焦虑）、fear（恐惧）、frustration（挫败）、tired（疲惫）
+- 中性：surprise（惊讶）、neutral（中性）
 
-3. 生成角色反馈
-   - 角色名称：${roleInfo.name}
-   - 角色设定：${roleInfo.description}
-   - 请严格按照角色设定生成反馈（30-50字）
-   - 反馈要求：
-     * 必须符合角色的定位和风格
-     * 基于用户输入提供个性化、有针对性的回应
-     * 不要使用外部数据或通用模板
-     * 不要输出建议（除非角色设定明确要求提供建议）
+${rolePromptSection}
 
-4. 生成治愈系金句
-   - 生成1句能够给予温暖和力量的话语
-   - 与用户当前情绪状态相关
+### 3. 生成角色反馈（60-100字）
+- 从「${roleInfo.focusDimension}」维度回应用户
+- 不是泛泛而谈，而是针对这个具体输入
+- 回应要体现这个角色独特的"看问题的角度"
+- 可以分2-3个层次展开，让用户感到被理解和陪伴
 
-请严格按照以下JSON格式输出，不要包含任何其他文字或markdown格式：
+### 4. 生成一记一句（1句）
+- 与用户当前情绪状态相关
+- 简短有力，给予温暖或力量
+
+## 输出格式（严格JSON，无其他文字）
 {
   "keyWords": ["关键词1", "关键词2"],
-  "emotionTag": "选择的情绪标签（如：joy、anxiety等）",
-  "feedback": "${roleInfo.name}视角的反馈内容，30-50字",
-  "slogan": "治愈系金句"
+  "emotionTag": "情绪标签（如：joy、anxiety）",
+  "feedback": "${roleInfo.name}从「${roleInfo.focusDimension}」维度的回应，60-100字",
+  "slogan": "一记一句"
 }`;
 
   try {

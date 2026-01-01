@@ -7,10 +7,10 @@ export type Role = FixedRole | string;
  * 获取角色信息（固定角色或自定义角色）
  */
 export function getRoleInfo(roleId: Role): { name: string; emoji: string; description?: string } {
-  // 特殊处理：名言模式
+  // 特殊处理：图标记录模式
   if (roleId === 'quote') {
     return {
-      name: '名言',
+      name: '图标记录',
       emoji: '💬',
       description: '一句温暖的话语',
     };

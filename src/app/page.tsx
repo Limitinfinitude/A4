@@ -452,7 +452,7 @@ export default function Home() {
               {inputMode === 'icon' ? '正在记录心情...' : 'AI 正在分析中...'}
             </span>
           ) : (
-            inputMode === 'icon' ? '✨ 记录心情' : '✨ 生成情绪镜像'
+            inputMode === 'icon' ? '✨ 记录心情' : '✨ 记录心情'
           )}
         </button>
 
@@ -517,7 +517,7 @@ export default function Home() {
           <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
             <div className="text-2xl mb-2">🤖</div>
             <h3 className="font-semibold text-gray-900 dark:text-white mb-1">AI 智能分析</h3>
-            <p className="text-xs text-gray-600 dark:text-gray-400">GPT-4o-mini 深度理解你的情绪</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">模型深度分析你的情绪</p>
           </div>
           <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
             <div className="text-2xl mb-2">💭</div>

@@ -27,6 +27,7 @@ type MoodRecord = {
   roleSnapshot?: RoleSnapshot; // 角色快照，用于角色被删除后仍能正确显示
   feedback: MoodAnalysisResult;
   createTime: string;
+  originalEmotionTag?: string; // 原始情绪标签（用户修正前，用于闭环洞察）
 };
 
 type TimeFilter = '3days' | 'week' | 'month';
@@ -36,6 +37,9 @@ export default function HistoryPage() {
   const [filterRole, setFilterRole] = useState<string>('all');
   const [filterEmotion, setFilterEmotion] = useState<string>('all');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('week');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editEmotionTag, setEditEmotionTag] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -69,6 +73,47 @@ export default function HistoryPage() {
     if (filterEmotion !== 'all' && record.feedback.emotionTag !== filterEmotion) return false;
     return true;
   });
+
+  // 开始编辑记录
+  const handleStartEdit = (record: MoodRecord) => {
+    setEditingId(record.id);
+    setEditContent(record.content);
+    setEditEmotionTag(record.feedback.emotionTag);
+  };
+
+  // 取消编辑
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditContent('');
+    setEditEmotionTag('');
+  };
+
+  // 保存编辑
+  const handleSaveEdit = (id: number) => {
+    const newHistory = history.map((record) => {
+      if (record.id === id) {
+        // 如果情绪标签被修改，且没有记录过原始标签，则记录原始标签
+        const isEmotionChanged = editEmotionTag !== record.feedback.emotionTag;
+        const originalEmotionTag = isEmotionChanged && !record.originalEmotionTag 
+          ? record.feedback.emotionTag 
+          : record.originalEmotionTag;
+        
+        return {
+          ...record,
+          content: editContent,
+          feedback: {
+            ...record.feedback,
+            emotionTag: editEmotionTag,
+          },
+          originalEmotionTag,
+        };
+      }
+      return record;
+    });
+    setHistory(newHistory);
+    localStorage.setItem('mood_history', JSON.stringify(newHistory));
+    handleCancelEdit();
+  };
 
   // 删除记录
   const handleDelete = (id: number) => {
@@ -283,21 +328,73 @@ export default function HistoryPage() {
                         </p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleDelete(record.id)}
-                      className="text-gray-400 hover:text-red-500 transition-colors"
-                      title="删除"
-                    >
-                      🗑️
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {editingId !== record.id && (
+                        <button
+                          onClick={() => handleStartEdit(record)}
+                          className="text-gray-400 hover:text-blue-500 transition-colors"
+                          title="编辑"
+                        >
+                          ✏️
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDelete(record.id)}
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        title="删除"
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
 
-                  {/* 原始日记内容 */}
-                  <div className="mb-4 bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-                    <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-sm whitespace-pre-wrap">
-                      {record.content}
-                    </p>
-                  </div>
+                  {/* 原始日记内容 - 编辑模式 */}
+                  {editingId === record.id ? (
+                    <div className="mb-4">
+                      <textarea
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value)}
+                        className="w-full p-4 bg-gray-50 dark:bg-gray-900 rounded-xl border-2 border-purple-300 dark:border-purple-600 text-gray-700 dark:text-gray-300 leading-relaxed text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        rows={4}
+                      />
+                      <div className="mt-3">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          情绪标签
+                        </label>
+                        <select
+                          value={editEmotionTag}
+                          onChange={(e) => setEditEmotionTag(e.target.value)}
+                          className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        >
+                          {Object.values(EMOTION_TAGS).map((tag) => (
+                            <option key={tag.en} value={tag.en}>
+                              {tag.zh} ({tag.en})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={() => handleSaveEdit(record.id)}
+                          className="flex-1 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors"
+                        >
+                          保存
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                        >
+                          取消
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mb-4 bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                      <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-sm whitespace-pre-wrap">
+                        {record.content}
+                      </p>
+                    </div>
+                  )}
 
                   <div className="flex flex-wrap gap-2 mb-4">
                     {record.feedback.keyWords.map((keyword, index) => (
@@ -320,7 +417,7 @@ export default function HistoryPage() {
                   </div>
 
                   <div className="mb-4 p-4 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 rounded-xl text-center">
-                    <p className="text-sm text-purple-600 dark:text-purple-400 mb-1">✨ 治愈系金句</p>
+                    <p className="text-sm text-purple-600 dark:text-purple-400 mb-1"> 『一记一句』</p>
                     <p className="text-base font-semibold text-purple-700 dark:text-purple-300">
                       {record.feedback.slogan}
                     </p>
