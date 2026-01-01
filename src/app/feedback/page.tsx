@@ -69,7 +69,7 @@ function FeedbackContent() {
   return (
     <div className="py-8 max-w-2xl mx-auto">
       <h1 className="text-3xl sm:text-4xl font-bold text-center mb-8 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-        {isQuoteMode ? '为你准备的一句话' : '你的情绪镜像'}
+        {isQuoteMode ? '为你准备的一句话' : '情绪分析报告'}
       </h1>
 
       {/* 图标记录模式：只显示一句话 */}
