@@ -14,10 +14,17 @@ type MoodAnalysisResult = {
   slogan: string;
 };
 
+type RoleSnapshot = {
+  name: string;
+  emoji: string;
+  description?: string;
+};
+
 type MoodRecord = {
   id: number;
   content: string;
   role: string; // 角色ID（固定角色或自定义角色）
+  roleSnapshot?: RoleSnapshot; // 角色快照，用于角色被删除后仍能正确显示
   feedback: MoodAnalysisResult;
   createTime: string;
 };
@@ -182,14 +189,22 @@ export default function HistoryPage() {
                 className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
                 <option value="all">全部角色</option>
-                {Array.from(new Set(history.map(r => r.role))).map((roleId) => {
-                  const roleInfo = getRoleInfo(roleId);
-                  return (
+                {(() => {
+                  // 收集唯一的角色，优先使用记录中的 roleSnapshot
+                  const roleMap = new Map<string, { emoji: string; name: string }>();
+                  history.forEach((record) => {
+                    if (!roleMap.has(record.role)) {
+                      // 优先使用 roleSnapshot，如果没有则回退到 getRoleInfo
+                      const info = record.roleSnapshot || getRoleInfo(record.role);
+                      roleMap.set(record.role, { emoji: info.emoji, name: info.name });
+                    }
+                  });
+                  return Array.from(roleMap.entries()).map(([roleId, info]) => (
                     <option key={roleId} value={roleId}>
-                      {roleInfo.emoji} {roleInfo.name}
+                      {info.emoji} {info.name}
                     </option>
-                  );
-                })}
+                  ));
+                })()}
               </select>
             </div>
 
@@ -240,7 +255,8 @@ export default function HistoryPage() {
                 (tag) => tag.en === record.feedback.emotionTag
               );
               const emotionTagZh = emotionTagInfo ? emotionTagInfo.zh : record.feedback.emotionTag;
-              const roleInfo = getRoleInfo(record.role);
+              // 优先使用 roleSnapshot，如果没有则回退到 getRoleInfo
+              const roleInfo = record.roleSnapshot || getRoleInfo(record.role);
               const roleColors = getRoleColor(record.role);
 
               return (

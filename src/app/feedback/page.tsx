@@ -14,10 +14,17 @@ type MoodAnalysisResult = {
   slogan: string;
 };
 
+type RoleSnapshot = {
+  name: string;
+  emoji: string;
+  description?: string;
+};
+
 type MoodRecord = {
   id: number;
   content: string;
   role: string; // 角色ID（固定角色或自定义角色）
+  roleSnapshot?: RoleSnapshot; // 角色快照，用于角色被删除后仍能正确显示
   feedback: MoodAnalysisResult;
   createTime: string;
 };
@@ -48,8 +55,8 @@ export default function FeedbackPage() {
   // 判断是否是名言模式
   const isQuoteMode = role === 'quote';
 
-  // 获取角色信息（非名言模式才需要）
-  const roleInfo = !isQuoteMode ? getRoleInfo(role) : null;
+  // 获取角色信息（非名言模式才需要），优先使用 roleSnapshot
+  const roleInfo = !isQuoteMode ? (record.roleSnapshot || getRoleInfo(role)) : null;
   const roleColors = !isQuoteMode ? getRoleColor(role) : null;
 
   // 获取情绪标签的中文显示（非名言模式才需要）

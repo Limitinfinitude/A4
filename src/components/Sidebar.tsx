@@ -12,6 +12,8 @@ export default function Sidebar() {
     { path: '/', label: '首页', icon: '🏠' },
     { path: '/summary', label: '总结', icon: '📊' },
     { path: '/history', label: '历史记录', icon: '📝' },
+    { path: '/settings', label: '备份恢复', icon: '💾' },
+    { path: '/privacy', label: '隐私说明', icon: '🔒' },
   ];
 
   return (

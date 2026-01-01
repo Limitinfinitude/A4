@@ -160,12 +160,37 @@ export default function Home() {
       }
 
       const data = await res.json();
+      
+      // 获取角色快照信息，即使角色将来被删除也能显示
+      const getRoleSnapshot = () => {
+        // 检查是否是固定角色
+        if (selectedRole in FIXED_ROLES) {
+          const fixedRole = selectedRole as keyof typeof FIXED_ROLES;
+          return {
+            name: FIXED_ROLES[fixedRole].name,
+            emoji: FIXED_ROLES[fixedRole].emoji,
+            description: FIXED_ROLES[fixedRole].description,
+          };
+        }
+        // 自定义角色
+        const customRole = customRoles.find(r => r.id === selectedRole);
+        if (customRole) {
+          return {
+            name: customRole.name,
+            emoji: '✨',
+            description: customRole.description,
+          };
+        }
+        return null;
+      };
+      
       const moodRecord = {
         id: Date.now(),
         content: finalContent,
         role: selectedRole,
+        roleSnapshot: getRoleSnapshot(), // 保存角色快照
         feedback: data as MoodAnalysisResult,
-        createTime: new Date().toLocaleString('zh-CN'),
+        createTime: new Date().toISOString(),
       };
 
       // 存储到 localStorage
@@ -194,8 +219,9 @@ export default function Home() {
       return;
     }
     
-    const role: CustomRole = editingRole || {
-      id: `custom_${Date.now()}`,
+    // 编辑时保留原 ID，新建时生成新 ID
+    const role: CustomRole = {
+      id: editingRole ? editingRole.id : `custom_${Date.now()}`,
       name: newRoleName.trim(),
       description: newRoleDesc.trim(),
     };
