@@ -629,7 +629,7 @@ export default function SummaryPage() {
                     border: '1px solid #e5e7eb',
                     borderRadius: '8px',
                   }}
-                  formatter={(value: number) => [`${value} 次`, '出现次数']}
+                  formatter={(value) => [`${value ?? 0} 次`, '出现次数']}
                 />
                 <Legend />
               </PieChart>
@@ -664,7 +664,7 @@ export default function SummaryPage() {
                     border: '1px solid #e5e7eb',
                     borderRadius: '8px',
                   }}
-                  formatter={(value: number) => [`平均强度: ${value}`, '']}
+                  formatter={(value) => [`平均强度: ${value ?? 0}`, '']}
                   labelFormatter={(label, payload) => {
                     if (payload && payload[0]) {
                       const data = payload[0].payload;
