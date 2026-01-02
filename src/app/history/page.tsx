@@ -178,13 +178,13 @@ export default function HistoryPage() {
     return (
       <MainLayout>
         <div className="py-8">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 sm:p-12 text-center border border-gray-200/50 dark:border-gray-700/50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 sm:p-12 text-center border border-gray-200 dark:border-gray-700">
             <div className="text-6xl mb-4">📝</div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">还没有情绪记录</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">去首页记录你的第一份心情吧～</p>
             <button
               onClick={() => router.push('/')}
-              className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all"
+              className="px-6 py-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-xl font-medium hover:bg-indigo-200 dark:hover:bg-indigo-900/40 transition-colors"
             >
               去记录心情
             </button>
