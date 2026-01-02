@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { EMOTION_TAGS } from '@/lib/analyzeMood';
 import { getRoleInfo } from '@/lib/roleUtils';
+import { getEmotionColorHex } from '@/lib/emotionColors';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
   PieChart, Pie, Cell
@@ -71,20 +72,9 @@ export default function SummaryPage() {
     neutral: 0,
   };
 
-  // 情绪颜色映射
-  const emotionColorMap: Record<string, string> = {
-    joy: '#fbbf24',
-    satisfaction: '#10b981',
-    calm: '#3b82f6',
-    hope: '#8b5cf6',
-    sadness: '#6366f1',
-    anger: '#ef4444',
-    anxiety: '#f59e0b',
-    fear: '#dc2626',
-    frustration: '#7c3aed',
-    tired: '#64748b',
-    surprise: '#ec4899',
-    neutral: '#94a3b8',
+  // 情绪颜色映射（使用工具函数）
+  const getEmotionColor = (emotionTag: string) => {
+    return getEmotionColorHex(emotionTag as any);
   };
 
   // 获取所有可用的日期
@@ -472,12 +462,12 @@ export default function SummaryPage() {
   return (
     <MainLayout>
       <div className="py-8">
-        <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-8">
-          情绪总结
+        <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-gray-200 mb-8">
+          统计
         </h1>
 
         {/* 视图选择器和日期选择器 */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6 border border-gray-200/50 dark:border-gray-700/50">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 mb-6 border border-gray-200 dark:border-gray-700">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -486,30 +476,30 @@ export default function SummaryPage() {
               <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={() => setViewMode('daily')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                     viewMode === 'daily'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                      : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                 >
                   📊 当天视图
                 </button>
                 <button
                   onClick={() => setViewMode('overview')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                     viewMode === 'overview'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                      : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                 >
                   🥧 单日概览
                 </button>
                 <button
                   onClick={() => setViewMode('trend')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                     viewMode === 'trend'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                      : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                 >
                   📈 周/月趋势
@@ -543,7 +533,7 @@ export default function SummaryPage() {
 
         {/* 1️⃣ 当天视图 */}
         {viewMode === 'daily' && dailyDetailData.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6 border border-gray-200/50 dark:border-gray-700/50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 mb-6 border border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
               当天情绪变化详情
             </h2>
@@ -597,7 +587,7 @@ export default function SummaryPage() {
 
         {/* 2️⃣ 单日概览 */}
         {viewMode === 'overview' && dailyOverviewData.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6 border border-gray-200/50 dark:border-gray-700/50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 mb-6 border border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
               单日情绪占比
             </h2>
@@ -619,7 +609,7 @@ export default function SummaryPage() {
                   {dailyOverviewData.map((entry, index) => (
                     <Cell 
                       key={`cell-${index}`} 
-                      fill={emotionColorMap[entry.emotionTag] || '#94a3b8'} 
+                      fill={getEmotionColor(entry.emotionTag)} 
                     />
                   ))}
                 </Pie>
@@ -639,7 +629,7 @@ export default function SummaryPage() {
 
         {/* 3️⃣ 周/月趋势 */}
         {viewMode === 'trend' && trendData.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6 border border-gray-200/50 dark:border-gray-700/50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 mb-6 border border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
               情绪趋势分析（周/月）
             </h2>
@@ -681,12 +671,12 @@ export default function SummaryPage() {
                   strokeWidth={2}
                   dot={(props: any) => {
                     const data = trendData[props.payload.index];
-                    const color = emotionColorMap[data?.dominant_emotion_tag] || '#8b5cf6';
+                    const color = getEmotionColor(data?.dominant_emotion_tag || 'neutral');
                     return <circle cx={props.cx} cy={props.cy} r={5} fill={color} stroke="#fff" strokeWidth={1} />;
                   }}
                   activeDot={(props: any) => {
                     const data = trendData[props.payload.index];
-                    const color = emotionColorMap[data?.dominant_emotion_tag] || '#8b5cf6';
+                    const color = getEmotionColor(data?.dominant_emotion_tag || 'neutral');
                     return <circle cx={props.cx} cy={props.cy} r={7} fill={color} stroke="#fff" strokeWidth={2} />;
                   }}
                   name="平均强度"
@@ -700,21 +690,31 @@ export default function SummaryPage() {
         {((summaryPeriod === 'recent' && recentSummaryData && recentSummaryData.total_records > 0) ||
           (summaryPeriod === 'week' && weekSummaryData && weekSummaryData.total_records > 0) ||
           (summaryPeriod === 'month' && monthSummaryData && monthSummaryData.total_records > 0)) && (
-          <div className="bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 dark:from-purple-900/30 dark:via-pink-900/30 dark:to-blue-900/30 rounded-2xl shadow-xl p-6 mb-6 border-2 border-purple-200 dark:border-purple-700">
+          <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl p-6 mb-6 border border-indigo-100 dark:border-indigo-900/30">
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <div className="flex items-center gap-3 flex-wrap">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <span className="text-2xl">✨</span>
-                  AI 洞察
+                  <svg
+                    className="w-5 h-5 text-gray-700 dark:text-gray-300"
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  分析
                 </h2>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setSummaryPeriod('recent')}
                     disabled={summaryLoading}
-                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${
+                    className={`px-3 py-1 rounded-xl text-sm font-medium transition-all ${
                       summaryPeriod === 'recent'
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-white/60 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 hover:bg-white/80 dark:hover:bg-gray-800/80'
+                        ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800'
+                        : 'bg-white/60 dark:bg-gray-800/60 text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-800'
                     }`}
                   >
                     近3天
@@ -722,10 +722,10 @@ export default function SummaryPage() {
                   <button
                     onClick={() => setSummaryPeriod('week')}
                     disabled={summaryLoading}
-                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${
+                    className={`px-3 py-1 rounded-xl text-sm font-medium transition-all ${
                       summaryPeriod === 'week'
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-white/60 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 hover:bg-white/80 dark:hover:bg-gray-800/80'
+                        ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800'
+                        : 'bg-white/60 dark:bg-gray-800/60 text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-800'
                     }`}
                   >
                     本周
@@ -733,10 +733,10 @@ export default function SummaryPage() {
                   <button
                     onClick={() => setSummaryPeriod('month')}
                     disabled={summaryLoading}
-                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${
+                    className={`px-3 py-1 rounded-xl text-sm font-medium transition-all ${
                       summaryPeriod === 'month'
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-white/60 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 hover:bg-white/80 dark:hover:bg-gray-800/80'
+                        ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800'
+                        : 'bg-white/60 dark:bg-gray-800/60 text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-800'
                     }`}
                   >
                     本月
@@ -749,7 +749,7 @@ export default function SummaryPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  AI 正在洞察...
+                  AI 正在分析...
                 </div>
               )}
             </div>
@@ -772,9 +772,9 @@ export default function SummaryPage() {
                 <button
                   onClick={handleGenerateSummary}
                   disabled={summaryLoading}
-                  className="px-6 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors disabled:opacity-50"
+                  className="px-6 py-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-xl text-sm font-medium hover:bg-indigo-200 dark:hover:bg-indigo-900/40 transition-colors disabled:opacity-50"
                 >
-                  {summaryLoading ? '洞察中...' : `生成${summaryPeriod === 'recent' ? '近期' : summaryPeriod === 'week' ? '本周' : '本月'}洞察`}
+                  {summaryLoading ? '分析中...' : `生成${summaryPeriod === 'recent' ? '近期' : summaryPeriod === 'week' ? '本周' : '本月'}统计`}
                 </button>
               </div>
             )}
@@ -791,7 +791,7 @@ export default function SummaryPage() {
                 <button
                   onClick={handleGenerateSummary}
                   disabled={summaryLoading}
-                  className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors disabled:opacity-50"
+                  className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors disabled:opacity-50"
                 >
                   重新生成
                 </button>
@@ -804,7 +804,7 @@ export default function SummaryPage() {
         {((viewMode === 'daily' && dailyDetailData.length === 0) ||
           (viewMode === 'overview' && dailyOverviewData.length === 0) ||
           (viewMode === 'trend' && trendData.length === 0)) && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center border border-gray-200/50 dark:border-gray-700/50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center border border-gray-200 dark:border-gray-700">
             <p className="text-gray-600 dark:text-gray-400">
               {viewMode === 'daily' || viewMode === 'overview'
                 ? '所选日期暂无记录'

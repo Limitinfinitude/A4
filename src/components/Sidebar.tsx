@@ -9,11 +9,11 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
 
   const menuItems = [
-    { path: '/', label: '首页', icon: '🏠' },
-    { path: '/summary', label: '总结', icon: '📊' },
-    { path: '/history', label: '历史记录', icon: '📝' },
-    { path: '/settings', label: '备份恢复', icon: '💾' },
-    { path: '/privacy', label: '隐私说明', icon: '🔒' },
+    { path: '/', label: '记录心情' },
+    { path: '/summary', label: '统计' },
+    { path: '/history', label: '历史记录' },
+    { path: '/settings', label: '设置' },
+    { path: '/privacy', label: '隐私' },
   ];
 
   return (
@@ -36,11 +36,11 @@ export default function Sidebar() {
           {/* Logo */}
           <div className="p-6 border-b border-gray-200 dark:border-gray-800">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xl font-bold">
+              <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-lg font-bold">
                 M
               </div>
               <div>
-                <h1 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                <h1 className="text-lg font-bold text-gray-800 dark:text-gray-200">
                   Mood Mirror
                 </h1>
                 <p className="text-xs text-gray-500 dark:text-gray-400">情绪镜像</p>
@@ -60,14 +60,13 @@ export default function Sidebar() {
                         router.push(item.path);
                         setIsOpen(false);
                       }}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all ${
+                      className={`w-full px-4 py-3 rounded-xl text-left transition-all text-sm ${
                         isActive
-                          ? 'bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 text-purple-700 dark:text-purple-300 font-medium'
-                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                          ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-medium'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
                       }`}
                     >
-                      <span className="text-xl">{item.icon}</span>
-                      <span>{item.label}</span>
+                      {item.label}
                     </button>
                   </li>
                 );
@@ -77,8 +76,12 @@ export default function Sidebar() {
 
           {/* 底部信息 */}
           <div className="p-4 border-t border-gray-200 dark:border-gray-800">
-            <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-              Made with ❤️
+            <p 
+              className="text-xs text-gray-400 dark:text-gray-500 text-center cursor-pointer select-none"
+              onDoubleClick={() => router.push('/debug')}
+              title="双击进入调试页面"
+            >
+              Mood Mirror
             </p>
           </div>
         </div>

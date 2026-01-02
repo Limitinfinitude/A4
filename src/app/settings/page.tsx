@@ -15,7 +15,8 @@ type MoodRecord = {
     description?: string;
   };
   feedback: {
-    keyWords: string[];
+    emotionLabels?: string[];
+    keyWords?: string[];
     emotionTag: string;
     feedback: string;
     slogan: string;
@@ -114,10 +115,10 @@ export default function SettingsPage() {
         markdown += `### 记录 #${index + 1}\n\n`;
         markdown += `**时间**：${date.toLocaleString('zh-CN')}\n\n`;
         markdown += `**角色**：${roleInfo.emoji} ${roleInfo.name}\n\n`;
-        markdown += `**情绪标签**：${record.feedback.emotionTag}\n\n`;
         
-        if (record.feedback.keyWords.length > 0) {
-          markdown += `**关键词**：${record.feedback.keyWords.join('、')}\n\n`;
+        const emotionLabels = record.feedback.emotionLabels || record.feedback.keyWords || [];
+        if (emotionLabels.length > 0) {
+          markdown += `**情绪标签**：${emotionLabels.join('、')}\n\n`;
         }
         
         markdown += `**内容**：\n\n${record.content}\n\n`;
@@ -225,19 +226,19 @@ export default function SettingsPage() {
   return (
     <MainLayout>
       <div className="py-8 max-w-4xl mx-auto">
-        <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-8">
-          数据备份与恢复
+        <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-gray-200 mb-8">
+          设置
         </h1>
 
         {/* 数据统计 */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">总记录数</p>
-            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{history.length}</p>
+            <p className="text-2xl font-bold text-gray-700 dark:text-gray-300">{history.length}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">自定义角色</p>
-            <p className="text-2xl font-bold text-pink-600 dark:text-pink-400">{customRoles.length}</p>
+            <p className="text-2xl font-bold text-gray-700 dark:text-gray-300">{customRoles.length}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">存储大小</p>
@@ -248,7 +249,7 @@ export default function SettingsPage() {
         </div>
 
         {/* 导出功能 */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-8 mb-6 border border-gray-200/50 dark:border-gray-700/50">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 mb-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <span>💾</span>
             导出数据
@@ -267,8 +268,8 @@ export default function SettingsPage() {
                   onClick={() => setExportFormat('json')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                     exportFormat === 'json'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                      : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                 >
                   JSON 格式
@@ -277,8 +278,8 @@ export default function SettingsPage() {
                   onClick={() => setExportFormat('markdown')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                     exportFormat === 'markdown'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                      : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                 >
                   Markdown 格式
@@ -288,7 +289,7 @@ export default function SettingsPage() {
 
             <button
               onClick={exportFormat === 'json' ? handleExportJSON : handleExportMarkdown}
-              className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] transition-all"
+              className="w-full py-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-xl font-semibold hover:bg-indigo-200 dark:hover:bg-indigo-900/40 transition-all"
               disabled={history.length === 0}
             >
               {exportFormat === 'json' ? '📥 导出为 JSON' : '📥 导出为 Markdown'}
@@ -303,7 +304,7 @@ export default function SettingsPage() {
         </div>
 
         {/* 导入功能 */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-8 mb-6 border border-gray-200/50 dark:border-gray-700/50">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 mb-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <span>📤</span>
             导入数据
@@ -325,7 +326,7 @@ export default function SettingsPage() {
                 onClick={() => document.getElementById('import-file')?.click()}
                 className="w-full py-3 px-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-center cursor-pointer hover:border-purple-500 dark:hover:border-purple-400 transition-colors"
               >
-                <span className="text-purple-600 dark:text-purple-400 font-medium">
+                <span className="text-indigo-600 dark:text-indigo-400 font-medium">
                   点击选择 JSON 备份文件
                 </span>
               </div>
@@ -346,7 +347,7 @@ export default function SettingsPage() {
         </div>
 
         {/* 危险操作 */}
-        <div className="bg-red-50 dark:bg-red-900/20 rounded-2xl shadow-xl p-6 sm:p-8 border-2 border-red-200 dark:border-red-700">
+        <div className="bg-red-50 dark:bg-red-900/20 rounded-2xl p-6 sm:p-8 border border-red-200 dark:border-red-700">
           <h2 className="text-xl font-bold text-red-900 dark:text-red-300 mb-4 flex items-center gap-2">
             <span>⚠️</span>
             危险操作

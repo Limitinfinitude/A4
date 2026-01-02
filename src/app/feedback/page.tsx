@@ -4,11 +4,13 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { EMOTION_TAGS } from '@/lib/analyzeMood';
 import { getRoleInfo, getRoleColor } from '@/lib/roleUtils';
+import { getEmotionColor } from '@/lib/emotionColors';
 import MainLayout from '@/components/MainLayout';
 
 // 和 analyzeMood.ts 中的类型对齐
 type MoodAnalysisResult = {
-  keyWords: string[];
+  emotionLabels?: string[]; // AI 判断的情绪标签（2-3个）
+  keyWords?: string[]; // 兼容旧数据
   emotionTag: string;
   feedback: string;
   slogan: string;
@@ -17,6 +19,7 @@ type MoodAnalysisResult = {
 type RoleSnapshot = {
   name: string;
   emoji: string;
+  avatar?: string;
   description?: string;
 };
 
@@ -53,108 +56,91 @@ function FeedbackContent() {
   if (!record) return <div className="p-8 text-center">加载中...</div>;
   const { feedback, role, content } = record;
 
-  // 判断是否是图标记录模式
-  const isQuoteMode = role === 'quote';
+  // 获取角色信息，优先使用 roleSnapshot
+  const roleInfo = record.roleSnapshot || getRoleInfo(role);
+  const roleColors = getRoleColor(role);
 
-  // 获取角色信息（非图标记录模式才需要），优先使用 roleSnapshot
-  const roleInfo = !isQuoteMode ? (record.roleSnapshot || getRoleInfo(role)) : null;
-  const roleColors = !isQuoteMode ? getRoleColor(role) : null;
-
-  // 获取情绪标签的中文显示（非图标记录模式才需要）
-  const emotionTagInfo = !isQuoteMode 
-    ? Object.values(EMOTION_TAGS).find(tag => tag.en === feedback.emotionTag)
-    : null;
+  // 获取情绪标签的中文显示
+  const emotionTagInfo = Object.values(EMOTION_TAGS).find(tag => tag.en === feedback.emotionTag);
   const emotionTagZh = emotionTagInfo ? emotionTagInfo.zh : feedback.emotionTag;
+  const emotionColors = feedback.emotionTag 
+    ? getEmotionColor(feedback.emotionTag as any)
+    : null;
 
   return (
     <div className="py-8 max-w-2xl mx-auto">
-      <h1 className="text-3xl sm:text-4xl font-bold text-center mb-8 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-        {isQuoteMode ? '为你准备的一句话' : '情绪分析报告'}
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-6">
+        你的情绪分析
       </h1>
 
-      {/* 图标记录模式：只显示一句话 */}
-      {isQuoteMode ? (
-        <>
-          <div className="bg-gradient-to-r from-purple-100 via-pink-100 to-blue-100 dark:from-purple-900 dark:via-pink-900 dark:to-blue-900 rounded-2xl shadow-xl p-8 sm:p-12 mb-6 border-2 border-purple-200 dark:border-purple-700 text-center">
-            <div className="text-6xl mb-6">{content}</div>
-            <p className="text-2xl sm:text-3xl font-bold text-purple-700 dark:text-purple-300 leading-relaxed">
-              {feedback.slogan}
+      {/* 心情图标显示 */}
+      {content.length === 1 && /[\u{1F300}-\u{1F9FF}]/u.test(content) && (
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 mb-6 text-center">
+          <div className="text-6xl mb-4">{content}</div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">心情</p>
+        </div>
+      )}
+
+      {/* AI 分析结果 */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 mb-6">
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">情绪标签</p>
+        <div className="flex flex-wrap gap-2">
+          {(feedback.emotionLabels || feedback.keyWords || [emotionTagZh]).map((label, index) => (
+            <span
+              key={index}
+              className={`px-4 py-2 ${emotionColors?.bg} ${emotionColors?.bgDark} ${emotionColors?.text} ${emotionColors?.textDark} rounded-xl text-sm font-medium border ${emotionColors?.border} ${emotionColors?.borderDark}`}
+            >
+              {label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* 角色反馈 */}
+      {feedback.feedback && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              {roleInfo?.avatar ? (
+                <img 
+                  src={roleInfo.avatar} 
+                  alt={roleInfo.name}
+                  className="w-12 h-12 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700"
+                />
+              ) : null}
+              <div>
+                <p className="font-semibold text-base text-gray-900 dark:text-white">
+                  {roleInfo?.name}
+                </p>
+                {roleInfo?.description && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {roleInfo.description}
+                  </p>
+                )}
+              </div>
+            </div>
+            <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-base">
+              {feedback.feedback}
             </p>
           </div>
-        </>
-      ) : (
-        <>
-          {/* 情绪关键词 */}
-          {feedback.keyWords.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-8 mb-6 border border-gray-200/50 dark:border-gray-700/50">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 text-center">潜意识情绪关键词</p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {feedback.keyWords.map((keyword, index) => (
-                  <span
-                    key={index}
-                    className="px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 text-purple-700 dark:text-purple-300 rounded-full text-sm font-medium"
-                  >
-                    {keyword}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+      )}
 
-          {/* AI 分析的情绪标签 */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-8 mb-6 border border-gray-200/50 dark:border-gray-700/50 text-center">
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">AI 分析的情绪</p>
-            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{emotionTagZh}</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">({feedback.emotionTag})</p>
-          </div>
-
-          {/* 角色反馈 */}
-          {feedback.feedback && (
-            <div className={`${roleColors?.bg} rounded-2xl shadow-xl p-6 sm:p-8 mb-6 border-2 ${roleColors?.border}`}>
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-3xl">{roleInfo?.emoji}</span>
-                <div>
-                  <p className={`font-semibold text-lg ${roleColors?.text}`}>
-                    {roleInfo?.name}的回应
-                  </p>
-                  {roleInfo?.description && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {roleInfo.description}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-base">
-                {feedback.feedback}
-              </p>
-            </div>
-          )}
-
-          {/* 一记一句 */}
-          {feedback.slogan && (
-            <div className="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 rounded-2xl shadow-xl p-6 sm:p-8 mb-6 border border-purple-200 dark:border-purple-700 text-center">
-              <p className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-3">『 一记一句 』</p>
-              <p className="text-xl font-bold text-purple-700 dark:text-purple-300 leading-relaxed">
-                {feedback.slogan}
-              </p>
-            </div>
-          )}
-        </>
+      {/* 一记一句 */}
+      {feedback.slogan && (
+        <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 p-8 mb-6 text-center">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 font-medium">✨ 一记一句</p>
+          <p className="text-lg text-gray-700 dark:text-gray-300 leading-relaxed font-medium">
+            {feedback.slogan}
+          </p>
+        </div>
       )}
 
       {/* 操作按钮 */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex justify-center">
         <button
-          className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] transition-all"
-          onClick={() => router.push('/')}
-        >
-          返回首页
-        </button>
-        <button
-          className="flex-1 py-3 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-semibold border-2 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+          className="px-8 py-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-xl font-medium hover:bg-indigo-200 dark:hover:bg-indigo-900/40 transition-all"
           onClick={() => router.push('/history')}
         >
-          查看情绪记录
+          返回
         </button>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { getModelName } from './config';
 import { EMOTION_TAGS } from './analyzeMood';
 
 // 获取 OpenAI 客户端（延迟初始化）
@@ -240,8 +241,9 @@ ${correctionText}
 直接输出总结文本，不要包含任何标题、编号或格式标记。`;
 
   try {
+    // 移除 max_completion_tokens 以兼容第三方 API
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: getModelName(),
       messages: [
         {
           role: 'system',
@@ -253,7 +255,6 @@ ${correctionText}
         },
       ],
       temperature: 0.75,
-      max_tokens: 400,
     });
 
     const summary = response.choices[0]?.message?.content?.trim();

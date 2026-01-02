@@ -9,20 +9,20 @@ export default function PrivacyPage() {
   return (
     <MainLayout>
       <div className="py-8 max-w-4xl mx-auto">
-        <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-8">
+        <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-gray-200 mb-8">
           隐私说明 & 情绪安全边界
         </h1>
 
         {/* 隐私说明 */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-8 mb-6 border border-gray-200/50 dark:border-gray-700/50">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 mb-6 border border-gray-200 dark:border-gray-700">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2">
             <span>🔒</span>
             隐私保护
           </h2>
 
           <div className="space-y-4 text-gray-700 dark:text-gray-300">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
                 数据存储
               </h3>
               <ul className="list-disc list-inside space-y-2 ml-4">
@@ -39,7 +39,7 @@ export default function PrivacyPage() {
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
                 AI 分析服务
               </h3>
               <ul className="list-disc list-inside space-y-2 ml-4">
@@ -59,7 +59,7 @@ export default function PrivacyPage() {
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
                 数据安全
               </h3>
               <ul className="list-disc list-inside space-y-2 ml-4">
@@ -78,15 +78,15 @@ export default function PrivacyPage() {
         </div>
 
         {/* 情绪安全边界 */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-8 mb-6 border border-gray-200/50 dark:border-gray-700/50">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 mb-6 border border-gray-200 dark:border-gray-700">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2">
             <span>🛡️</span>
             情绪安全边界
           </h2>
 
           <div className="space-y-4 text-gray-700 dark:text-gray-300">
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4 rounded">
-              <h3 className="text-lg font-semibold text-yellow-900 dark:text-yellow-300 mb-2">
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4 rounded-xl">
+              <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-300 mb-2">
                 ⚠️ 重要提示
               </h3>
               <p>
@@ -96,7 +96,7 @@ export default function PrivacyPage() {
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
                 适用场景
               </h3>
               <ul className="list-disc list-inside space-y-2 ml-4">
@@ -108,7 +108,7 @@ export default function PrivacyPage() {
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
                 不适用场景
               </h3>
               <ul className="list-disc list-inside space-y-2 ml-4">
@@ -131,7 +131,7 @@ export default function PrivacyPage() {
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
                 使用建议
               </h3>
               <ul className="list-disc list-inside space-y-2 ml-4">
@@ -153,8 +153,8 @@ export default function PrivacyPage() {
         </div>
 
         {/* 免责声明 */}
-        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-2xl shadow-xl p-6 sm:p-8 mb-6 border border-gray-200/50 dark:border-gray-700/50">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-2xl p-6 sm:p-8 mb-6 border border-gray-200 dark:border-gray-700">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2">
             <span>📋</span>
             免责声明
           </h2>
@@ -178,8 +178,8 @@ export default function PrivacyPage() {
         </div>
 
         {/* 联系方式 */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-8 mb-6 border border-gray-200/50 dark:border-gray-700/50">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 mb-6 border border-gray-200 dark:border-gray-700">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2">
             <span>📧</span>
             反馈与支持
           </h2>
@@ -192,7 +192,7 @@ export default function PrivacyPage() {
         <div className="text-center">
           <button
             onClick={() => router.push('/')}
-            className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-[1.02] transition-all"
+            className="px-6 py-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-xl font-semibold hover:bg-indigo-200 dark:hover:bg-indigo-900/40 transition-all"
           >
             返回首页
           </button>
