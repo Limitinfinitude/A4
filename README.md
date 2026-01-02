@@ -19,17 +19,17 @@
 </div>
 
 <div align="center">
-  <img src="./screenshots/2.png" alt="反馈页面" width="800" />
+  <img src="./screenshots/2.png" alt="表情记录页面" width="800" />
   <p><em>AI 反馈</em></p>
 </div>
 
 <div align="center">
-  <img src="./screenshots/3.png" alt="历史记录" width="800" />
+  <img src="./screenshots/3.png" alt="统计界面" width="800" />
   <p><em>历史记录</em></p>
 </div>
 
 <div align="center">
-  <img src="./screenshots/4.png" alt="统计页面" width="800" />
+  <img src="./screenshots/4.png" alt="历史记录页面" width="800" />
   <p><em>统计与洞察</em></p>
 </div>
 
