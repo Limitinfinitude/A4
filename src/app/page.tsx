@@ -81,12 +81,12 @@ export default function Home() {
 
   // 提交心情图标记录
   const handleSubmitIcon = async () => {
-    if (!selectedIcon) {
-      alert('请选择一个心情图标～');
-      return;
-    }
-    
-    setLoading(true);
+      if (!selectedIcon) {
+        alert('请选择一个心情图标～');
+        return;
+      }
+      
+      setLoading(true);
     
     // 创建性能计时器
     const { PerformanceTimer } = await import('@/lib/performanceLogger');
@@ -106,31 +106,31 @@ export default function Home() {
       
       perfTimer.startStage('API 请求');
       const res = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           content: selectedIcon,
           role: selectedRole,
           customRoles: customRoles,
           aiConfig,
         }),
-      });
+        });
       perfTimer.endStage();
 
-      if (!res.ok) {
-        const error = await res.json();
+        if (!res.ok) {
+          const error = await res.json();
         throw new Error(error.error || '分析失败');
-      }
+        }
 
       perfTimer.startStage('处理响应');
-      const data = await res.json();
+        const data = await res.json();
       // 获取角色信息用于快照
       const roleInfo = getRoleInfo(selectedRole);
-      
+        
       // AI 分析的情绪标签和标准标签
-      const moodRecord = {
-        id: Date.now(),
-        content: selectedIcon,
+        const moodRecord = {
+          id: Date.now(),
+          content: selectedIcon,
         role: selectedRole,
         roleSnapshot: {
           name: roleInfo.name,
@@ -139,30 +139,30 @@ export default function Home() {
           description: roleInfo.description,
         },
         feedback: data as MoodAnalysisResult,
-        createTime: new Date().toISOString(),
-      };
+          createTime: new Date().toISOString(),
+        };
 
-      // 存储到 localStorage
-      const history = JSON.parse(localStorage.getItem('mood_history') || '[]');
-      history.unshift(moodRecord);
-      localStorage.setItem('mood_history', JSON.stringify(history));
+        // 存储到 localStorage
+        const history = JSON.parse(localStorage.getItem('mood_history') || '[]');
+        history.unshift(moodRecord);
+        localStorage.setItem('mood_history', JSON.stringify(history));
       perfTimer.endStage();
       
       // 记录成功（包含 token 信息）
       perfTimer.finish(true, undefined, data.tokens);
       
-      setSelectedIcon('');
+        setSelectedIcon('');
       setShowIconModal(false);
 
-      // 跳转到反馈页
-      router.push(`/feedback?id=${moodRecord.id}`);
-    } catch (error: any) {
+        // 跳转到反馈页
+        router.push(`/feedback?id=${moodRecord.id}`);
+      } catch (error: any) {
       // 记录失败
       perfTimer.finish(false, error.message || '分析失败');
       alert(error.message || '分析失败，请检查网络或API密钥～');
-    } finally {
-      setLoading(false);
-    }
+      } finally {
+        setLoading(false);
+      }
   };
 
   // 提交文字记录
@@ -457,7 +457,7 @@ export default function Home() {
               <svg
                 className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${
                   isRoleExpanded ? 'rotate-180' : ''
-                }`}
+                    }`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -471,36 +471,36 @@ export default function Home() {
               <div className="mt-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs text-gray-500 dark:text-gray-400">选择角色</span>
-                  <button
-                    onClick={() => {
-                      setEditingRole(null);
-                      setNewRoleName('');
-                      setNewRoleDesc('');
+              <button
+                onClick={() => {
+                  setEditingRole(null);
+                  setNewRoleName('');
+                  setNewRoleDesc('');
                       setNewRoleAvatar('');
                       setAvatarPreview('');
                       setNewRoleColor('orange');
-                      setShowCustomRoleModal(true);
-                    }}
+                  setShowCustomRoleModal(true);
+                }}
                     className="px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors border border-gray-200 dark:border-gray-700"
-                  >
+              >
                     + 自定义
-                  </button>
-                </div>
+              </button>
+            </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-                  {allRoles.map((role) => (
-                    <div key={role.id} className="relative">
-                      <button
+              {allRoles.map((role) => (
+                <div key={role.id} className="relative">
+                  <button
                         className={`w-full px-3 py-2 rounded-lg text-sm font-medium border transition-all text-left ${
-                          selectedRole === role.id
+                      selectedRole === role.id
                             ? 'border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20'
                             : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
-                        }`}
+                    }`}
                         onClick={() => {
                           setSelectedRole(role.id);
                           setIsRoleExpanded(false);
                         }}
-                        disabled={loading}
-                      >
+                    disabled={loading}
+                  >
                         <div className="flex items-center gap-2 mb-1">
                           {role.avatar ? (
                             <img 
@@ -510,42 +510,42 @@ export default function Home() {
                             />
                           ) : null}
                           <span className="font-medium text-xs">{role.name}</span>
-                        </div>
+                    </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{role.desc}</p>
-                      </button>
-                      {role.isCustom && (
+                  </button>
+                  {role.isCustom && (
                         <div className="absolute top-1 right-1 flex gap-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditCustomRole(customRoles.find(r => r.id === role.id)!);
-                            }}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditCustomRole(customRoles.find(r => r.id === role.id)!);
+                        }}
                             className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700"
-                            title="编辑"
-                          >
+                        title="编辑"
+                      >
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                             </svg>
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteCustomRole(role.id);
-                            }}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteCustomRole(role.id);
+                        }}
                             className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700"
-                            title="删除"
-                          >
+                        title="删除"
+                      >
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
-                          </button>
-                        </div>
-                      )}
+                      </button>
                     </div>
-                  ))}
+                  )}
                 </div>
-              </div>
-            )}
+              ))}
+            </div>
+          </div>
+        )}
           </div>
 
           {/* 文字输入模式 */}
@@ -591,17 +591,17 @@ export default function Home() {
 
         {/* 提交按钮（仅文字模式显示） */}
         {inputMode === 'text' && (
-          <button
+        <button
             className="w-full py-3.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-xl font-medium hover:bg-indigo-200 dark:hover:bg-indigo-900/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed mb-6"
-            onClick={handleSubmit}
+          onClick={handleSubmit}
             disabled={loading || !content.trim()}
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+        >
+          {loading ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
                 <span>AI 正在分析...</span>
               </span>
             ) : (
@@ -641,11 +641,11 @@ export default function Home() {
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
                       <span>记录中...</span>
-                    </span>
-                  ) : (
+            </span>
+          ) : (
                     '记录'
-                  )}
-                </button>
+          )}
+        </button>
               </div>
             </div>
           </div>

@@ -37,6 +37,27 @@
 - **首次引导**：动态引导页面，快速上手
 - **响应式设计**：完美适配桌面端和移动端
 
+## 📹 演示视频
+
+<div align="center">
+  <video src="https://github.com/Limitinfinitude/A4/raw/main/演示视频.mp4" controls width="700">
+    您的浏览器不支持视频播放。
+  </video>
+  <p><em>🎬 5分钟完整演示 - 从入门到精通</em></p>
+</div>
+
+> 💡 如果视频无法播放，请 [点击这里直接下载](./演示视频.mp4) 或访问项目仓库查看。
+
+
+
+<div align="center">
+
+### 🌐 [在线体验 →](http://47.96.170.169:3000/)
+
+**无需安装，立即开始记录你的心情！**
+
+</div>
+
 ## 📸 界面预览
 
 ### 记录心情
@@ -102,7 +123,7 @@
 
 ### 环境要求
 
-- Node.js 18+
+- Node.js 18+ 
 - npm / yarn / pnpm
 
 ### 安装步骤
@@ -259,7 +280,7 @@ MIT License
 ---
 
 <div align="center">
-  
+
 Made with ❤️ using Next.js, OpenAI & Ollama
 
 **[⭐ Star this project](https://github.com/Limitinfinitude/A4)** if you find it helpful!

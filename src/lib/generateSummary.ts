@@ -234,14 +234,14 @@ ${correctionText}
 
   try {
     const messages = [
-      {
+        {
         role: 'system' as const,
         content: '你是一位富有洞察力的情绪陪伴者，擅长用温暖、有深度的语言帮助用户理解自己的情绪。你遵守伦理边界，不做诊断和指导，只提供观察和陪伴。',
-      },
-      {
+        },
+        {
         role: 'user' as const,
-        content: prompt,
-      },
+          content: prompt,
+        },
     ];
 
     const aiResult = await callAI(messages, aiConfig);

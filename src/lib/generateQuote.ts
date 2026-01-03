@@ -57,14 +57,14 @@ export async function generateQuote(
     console.log('生成一记一句 - Prompt：', prompt);
 
     const messages = [
-      {
+        {
         role: 'system' as const,
         content: '你是一位专业的情绪分析师，擅长分析表情所代表的情绪，并生成温暖的话语。请根据用户选择的表情，分析情绪并生成一记一句。',
-      },
-      {
+        },
+        {
         role: 'user' as const,
-        content: prompt,
-      },
+          content: prompt,
+        },
     ];
 
     // 合并配置，指定 JSON 响应格式
