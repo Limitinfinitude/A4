@@ -14,7 +14,7 @@ export type AIMode = 'api' | 'ollama';
 
 // 默认模型名称
 //const DEFAULT_MODEL = 'gpt-4o-mini';
-const DEFAULT_MODEL = 'gpt-5-mini';
+const DEFAULT_MODEL = 'gpt-5.2';
 
 // 默认 Ollama URL
 const DEFAULT_OLLAMA_URL = 'http://localhost:11434';

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import MainLayout from '@/components/MainLayout';
 import { getCustomRoles } from '@/lib/customRoles';
+import type { CustomRole } from '@/lib/analyzeMood';
 
 type MoodRecord = {
   id: number;
@@ -28,11 +29,7 @@ type BackupData = {
   version: string;
   exportTime: string;
   moodHistory: MoodRecord[];
-  customRoles: Array<{
-    id: string;
-    name: string;
-    description: string;
-  }>;
+  customRoles: CustomRole[]; // 使用完整的 CustomRole 类型，包含 avatar 和 color
 };
 
 export default function SettingsPage() {
@@ -41,7 +38,7 @@ export default function SettingsPage() {
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [importMessage, setImportMessage] = useState('');
   const [history, setHistory] = useState<MoodRecord[]>([]);
-  const [customRoles, setCustomRoles] = useState<Array<{ id: string; name: string; description: string }>>([]);
+  const [customRoles, setCustomRoles] = useState<CustomRole[]>([]);
 
   // 在客户端挂载后读取数据
   useEffect(() => {
@@ -101,7 +98,14 @@ export default function SettingsPage() {
         currentCustomRoles.forEach((role) => {
           markdown += `### ${role.name}\n\n`;
           markdown += `- **ID**：\`${role.id}\`\n`;
-          markdown += `- **描述**：${role.description}\n\n`;
+          markdown += `- **描述**：${role.description}\n`;
+          if (role.color) {
+            markdown += `- **主题色**：${role.color}\n`;
+          }
+          if (role.avatar) {
+            markdown += `- **头像**：已设置\n`;
+          }
+          markdown += `\n`;
         });
         markdown += `---\n\n`;
       }

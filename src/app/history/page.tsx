@@ -453,7 +453,7 @@ export default function HistoryPage() {
                   )}
 
                   {/* 角色回应 */}
-                  <div className={`mb-4 p-4 ${emotionColors.bg} ${emotionColors.bgDark} rounded-xl border-2 ${emotionColors.border} ${emotionColors.borderDark}`}>
+                  <div className={`mb-4 p-4 ${roleColors.bg} rounded-xl border-2 ${roleColors.border}`}>
                     <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
                       {record.feedback.feedback}
                     </p>
@@ -466,7 +466,7 @@ export default function HistoryPage() {
                           {(record.feedback.emotionLabels || record.feedback.keyWords || [emotionTagZh]).map((label, index) => (
                             <span
                               key={index}
-                              className={`px-3 py-1 ${emotionColors.bg} ${emotionColors.bgDark} ${emotionColors.text} ${emotionColors.textDark} rounded-full text-xs font-medium border-2 ${emotionColors.border} ${emotionColors.borderDark}`}
+                              className={`px-3 py-1 ${emotionColors.bg} ${emotionColors.bgDark} ${emotionColors.text} ${emotionColors.textDark} rounded-full text-xs font-medium border ${emotionColors.border} ${emotionColors.borderDark}`}
                             >
                               {label}
                             </span>

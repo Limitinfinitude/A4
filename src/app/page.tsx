@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import MainLayout from '@/components/MainLayout';
+import UserGuide from '@/components/UserGuide';
 import { FIXED_ROLES, type FixedRole, type CustomRole } from '@/lib/analyzeMood';
 import { getCustomRoles, saveCustomRole, deleteCustomRole } from '@/lib/customRoles';
 import { getRoleInfo } from '@/lib/roleUtils';
@@ -48,10 +49,12 @@ export default function Home() {
   const [customRoles, setCustomRoles] = useState<CustomRole[]>([]);
   const [showCustomRoleModal, setShowCustomRoleModal] = useState(false);
   const [editingRole, setEditingRole] = useState<CustomRole | null>(null);
+  const [showGuide, setShowGuide] = useState(false); // 用户引导
   const [newRoleName, setNewRoleName] = useState('');
   const [newRoleDesc, setNewRoleDesc] = useState('');
   const [newRoleAvatar, setNewRoleAvatar] = useState<string>('');
   const [avatarPreview, setAvatarPreview] = useState<string>('');
+  const [newRoleColor, setNewRoleColor] = useState<string>('orange'); // 默认橙色
   const [showIconModal, setShowIconModal] = useState(false); // 心情图标弹窗状态
   const router = useRouter();
 
@@ -312,6 +315,7 @@ export default function Home() {
       name: newRoleName.trim(),
       description: newRoleDesc.trim(),
       avatar: newRoleAvatar || undefined,
+      color: newRoleColor, // 保存颜色设置
     };
     
     saveCustomRole(role);
@@ -322,6 +326,7 @@ export default function Home() {
     setNewRoleDesc('');
     setNewRoleAvatar('');
     setAvatarPreview('');
+    setNewRoleColor('orange'); // 重置为默认颜色
   };
 
   // 删除自定义角色
@@ -342,6 +347,7 @@ export default function Home() {
     setNewRoleDesc(role.description);
     setNewRoleAvatar(role.avatar || '');
     setAvatarPreview(role.avatar || '');
+    setNewRoleColor(role.color || 'orange'); // 加载角色颜色
     setShowCustomRoleModal(true);
   };
 
@@ -369,7 +375,7 @@ export default function Home() {
     <MainLayout>
       <div className="py-8">
         {/* 欢迎区域 */}
-        <div className="mb-8 text-center">
+        <div className="mb-8 text-center relative">
           <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-2">
             今天心情如何？
           </h2>
@@ -378,6 +384,18 @@ export default function Home() {
               ? '选择一个心情图标，快速记录当下的情绪'
               : '选择一个角色，让 AI 为你提供温暖的陪伴'}
           </p>
+          
+          {/* 教程按钮 */}
+          <button
+            onClick={() => setShowGuide(true)}
+            className="absolute top-0 right-4 flex items-center gap-1.5 px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/40 transition-colors text-sm font-medium"
+            title="查看使用教程"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            教程
+          </button>
         </div>
 
         {/* 输入模式选择 */}
@@ -460,6 +478,7 @@ export default function Home() {
                       setNewRoleDesc('');
                       setNewRoleAvatar('');
                       setAvatarPreview('');
+                      setNewRoleColor('orange');
                       setShowCustomRoleModal(true);
                     }}
                     className="px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors border border-gray-200 dark:border-gray-700"
@@ -710,6 +729,42 @@ export default function Home() {
                     placeholder="描述这个角色的特点、风格和反馈方式，例如：专业、温和、提供心理支持..."
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    主题颜色
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { value: 'orange', label: '橙', color: 'bg-orange-400', text: 'text-orange-600 dark:text-orange-400' },
+                      { value: 'blue', label: '蓝', color: 'bg-blue-400', text: 'text-blue-600 dark:text-blue-400' },
+                      { value: 'yellow', label: '黄', color: 'bg-yellow-400', text: 'text-yellow-600 dark:text-yellow-400' },
+                      { value: 'green', label: '绿', color: 'bg-green-400', text: 'text-green-600 dark:text-green-400' },
+                      { value: 'purple', label: '紫', color: 'bg-purple-400', text: 'text-purple-600 dark:text-purple-400' },
+                      { value: 'pink', label: '彩', color: 'bg-pink-400', text: 'text-pink-600 dark:text-pink-400' },
+                      { value: 'gray', label: '灰', color: 'bg-gray-400', text: 'text-gray-600 dark:text-gray-400' },
+                      { value: 'amber', label: '棕', color: 'bg-amber-400', text: 'text-amber-600 dark:text-amber-400' },
+                    ].map((colorOption) => (
+                      <button
+                        key={colorOption.value}
+                        type="button"
+                        onClick={() => setNewRoleColor(colorOption.value)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all ${
+                          newRoleColor === colorOption.value
+                            ? `${colorOption.color} border-current ring-2 ring-offset-2 ring-current`
+                            : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded-full ${colorOption.color}`} />
+                        <span className={`text-xs font-medium ${newRoleColor === colorOption.value ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                          {colorOption.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    选择一个主题色，将用于历史记录中该角色的显示边框和名字颜色
+                  </p>
+                </div>
               </div>
               <div className="flex gap-3 mt-6">
                 <button
@@ -720,6 +775,7 @@ export default function Home() {
                     setNewRoleDesc('');
                     setNewRoleAvatar('');
                     setAvatarPreview('');
+                    setNewRoleColor('orange');
                   }}
                   className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
                 >
@@ -741,6 +797,9 @@ export default function Home() {
           <p>💡 提示：你的日记会自动保存，不用担心丢失</p>
         </div>
       </div>
+      
+      {/* 用户引导 */}
+      <UserGuide isOpen={showGuide} onClose={() => setShowGuide(false)} />
     </MainLayout>
   );
 }

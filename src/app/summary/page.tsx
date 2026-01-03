@@ -119,18 +119,10 @@ export default function SummaryPage() {
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   const [linePeriod, setLinePeriod] = useState<TimePeriod>('day');
   const [piePeriod, setPiePeriod] = useState<TimePeriod>('day');
-  const [showGuide, setShowGuide] = useState(false);
-  const [guideStep, setGuideStep] = useState(0);
 
   useEffect(() => {
     const savedHistory = JSON.parse(localStorage.getItem('mood_history') || '[]') as MoodRecord[];
     setHistory(savedHistory);
-    
-    // 检查是否首次访问统计页面
-    const hasVisitedSummary = localStorage.getItem('has_visited_summary');
-    if (!hasVisitedSummary) {
-      setShowGuide(true);
-    }
   }, []);
 
   // 情绪强度映射
@@ -749,134 +741,9 @@ export default function SummaryPage() {
     }
   };
 
-  // 引导步骤内容
-  const guideSteps = [
-    {
-      title: '欢迎来到统计页面！',
-      description: '这里可以查看和分析你的心情记录，了解情绪变化趋势',
-      icon: '👋',
-    },
-    {
-      title: '📅 日历视图',
-      description: '直观查看每天的心情状态，点击有记录的日期可以查看详情',
-      highlight: 'calendar',
-    },
-    {
-      title: '📊 线性统计',
-      description: '查看情绪强度的变化趋势，支持按天、周、月切换',
-      highlight: 'line',
-    },
-    {
-      title: '🥧 扇形统计',
-      description: '查看不同情绪的分布占比，了解情绪构成',
-      highlight: 'pie',
-    },
-    {
-      title: '🔍 AI 分析',
-      description: 'AI 会根据你的数据生成智能文案和深度分析报告',
-      highlight: 'ai',
-    },
-  ];
-
-  // 处理引导完成
-  const handleGuideComplete = () => {
-    localStorage.setItem('has_visited_summary', 'true');
-    setShowGuide(false);
-    setGuideStep(0);
-  };
-
-  // 处理跳过引导
-  const handleSkipGuide = () => {
-    localStorage.setItem('has_visited_summary', 'true');
-    setShowGuide(false);
-    setGuideStep(0);
-  };
-
-  // 下一步
-  const handleNextStep = () => {
-    if (guideStep < guideSteps.length - 1) {
-      setGuideStep(guideStep + 1);
-    } else {
-      handleGuideComplete();
-    }
-  };
-
-  // 上一步
-  const handlePrevStep = () => {
-    if (guideStep > 0) {
-      setGuideStep(guideStep - 1);
-    }
-  };
 
   return (
     <MainLayout>
-      {/* 引导页面遮罩 */}
-      {showGuide && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl border-2 border-indigo-200 dark:border-indigo-800 p-8 max-w-lg w-full shadow-2xl animate-scaleIn">
-            {/* 进度指示器 */}
-            <div className="flex gap-2 mb-6 justify-center">
-              {guideSteps.map((_, index) => (
-                <div
-                  key={index}
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    index === guideStep
-                      ? 'w-8 bg-indigo-600 dark:bg-indigo-400'
-                      : index < guideStep
-                      ? 'w-2 bg-indigo-300 dark:bg-indigo-600'
-                      : 'w-2 bg-gray-300 dark:bg-gray-600'
-                  }`}
-                />
-              ))}
-            </div>
-
-            {/* 内容区域 */}
-            <div className="text-center mb-8 min-h-[200px] flex flex-col items-center justify-center">
-              {guideSteps[guideStep].icon && (
-                <div className="text-6xl mb-4 animate-bounce">
-                  {guideSteps[guideStep].icon}
-                </div>
-              )}
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                {guideSteps[guideStep].title}
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300 text-lg leading-relaxed">
-                {guideSteps[guideStep].description}
-              </p>
-            </div>
-
-            {/* 按钮区域 */}
-            <div className="flex gap-3">
-              {guideStep > 0 && (
-                <button
-                  onClick={handlePrevStep}
-                  className="flex-1 px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
-                >
-                  上一步
-                </button>
-              )}
-              <button
-                onClick={handleSkipGuide}
-                className="flex-1 px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
-              >
-                跳过
-              </button>
-              <button
-                onClick={handleNextStep}
-                className="flex-1 px-6 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl font-medium hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-all"
-              >
-                {guideStep === guideSteps.length - 1 ? '开始使用' : '下一步'}
-              </button>
-            </div>
-
-            {/* 步骤指示 */}
-            <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
-              {guideStep + 1} / {guideSteps.length}
-            </p>
-          </div>
-        </div>
-      )}
-
       <div className="py-8">
         <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-gray-200 mb-8">
           统计

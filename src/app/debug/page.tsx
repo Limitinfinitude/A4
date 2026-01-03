@@ -42,6 +42,13 @@ export default function DebugPage() {
   const [ollamaStatus, setOllamaStatus] = useState<'checking' | 'available' | 'unavailable'>('checking');
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   
+  // 时间修改功能相关状态
+  const [showTimeEditor, setShowTimeEditor] = useState(false);
+  const [moodRecords, setMoodRecords] = useState<any[]>([]);
+  const [editingRecord, setEditingRecord] = useState<any | null>(null);
+  const [newDate, setNewDate] = useState('');
+  const [newTime, setNewTime] = useState('');
+  
   useEffect(() => {
     // 检查是否已认证（从 sessionStorage）
     const auth = sessionStorage.getItem('debug_auth');
@@ -138,7 +145,63 @@ export default function DebugPage() {
     }
   };
 
-  // 永久保存配置
+  // 恢复到初始用户状态
+  const handleResetUserState = () => {
+    if (confirm('确定要恢复到初始用户状态吗？这将清除所有首次访问标记，下次进入将重新显示隐私协议和引导。')) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('privacy_agreement_accepted');
+        localStorage.removeItem('has_viewed_guide');
+        alert('已恢复到初始用户状态！刷新页面即可看到隐私协议。');
+      }
+    }
+  };
+  
+  // 加载心情记录
+  const loadMoodRecords = () => {
+    if (typeof window !== 'undefined') {
+      const records = JSON.parse(localStorage.getItem('mood_history') || '[]');
+      setMoodRecords(records);
+      setShowTimeEditor(true);
+    }
+  };
+  
+  // 开始编辑时间
+  const handleEditTime = (record: any) => {
+    setEditingRecord(record);
+    const date = new Date(record.date);
+    const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+    const timeStr = date.toTimeString().slice(0, 5); // HH:mm
+    setNewDate(dateStr);
+    setNewTime(timeStr);
+  };
+  
+  // 保存修改后的时间
+  const handleSaveTime = () => {
+    if (!editingRecord || !newDate || !newTime) {
+      alert('请选择日期和时间！');
+      return;
+    }
+    
+    const newDateTime = new Date(`${newDate}T${newTime}`);
+    if (isNaN(newDateTime.getTime())) {
+      alert('无效的日期时间！');
+      return;
+    }
+    
+    if (typeof window !== 'undefined') {
+      const records = JSON.parse(localStorage.getItem('mood_history') || '[]');
+      const index = records.findIndex((r: any) => r.id === editingRecord.id);
+      if (index !== -1) {
+        records[index].date = newDateTime.toISOString();
+        localStorage.setItem('mood_history', JSON.stringify(records));
+        alert('时间已修改！');
+        loadMoodRecords();
+        setEditingRecord(null);
+        setNewDate('');
+        setNewTime('');
+      }
+    }
+  };
 
   const handleReset = () => {
     if (confirm('确定要重置所有配置吗？这将清除所有配置（包括永久配置）并恢复为默认值。')) {
@@ -483,6 +546,47 @@ export default function DebugPage() {
             </div>
           </div>
         </div>
+
+        {/* 数据管理 */}
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+            📦 数据管理
+          </h2>
+          
+          <div className="space-y-4">
+            {/* 恢复初始状态 */}
+            <div className="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-xl">
+              <h3 className="text-sm font-semibold text-orange-800 dark:text-orange-300 mb-2">
+                🔄 恢复到初始用户状态
+              </h3>
+              <p className="text-xs text-orange-700 dark:text-orange-300 mb-3">
+                清除所有首次访问标记（隐私协议、用户引导等），下次进入将重新显示。适用于测试和演示。
+              </p>
+              <button
+                onClick={handleResetUserState}
+                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                恢复初始状态
+              </button>
+            </div>
+
+            {/* 修改记录时间 */}
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl">
+              <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">
+                ⏰ 修改记录时间
+              </h3>
+              <p className="text-xs text-blue-700 dark:text-blue-300 mb-3">
+                修改心情记录的日期和时间，便于制作演示数据和测试不同时间段的统计功能。
+              </p>
+              <button
+                onClick={loadMoodRecords}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                管理记录时间
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* 确认弹窗 */}
@@ -519,6 +623,123 @@ export default function DebugPage() {
                 确认保存
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 时间编辑器弹窗 */}
+      {showTimeEditor && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                ⏰ 修改记录时间
+              </h3>
+              <button
+                onClick={() => {
+                  setShowTimeEditor(false);
+                  setEditingRecord(null);
+                  setNewDate('');
+                  setNewTime('');
+                }}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                ✕
+              </button>
+            </div>
+
+            {moodRecords.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                暂无心情记录
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {moodRecords.map((record) => (
+                  <div
+                    key={record.id}
+                    className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-200 dark:border-gray-700"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                            {new Date(record.date).toLocaleString('zh-CN', {
+                              year: 'numeric',
+                              month: '2-digit',
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                          {record.emotionLabels && record.emotionLabels.length > 0 && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {record.emotionLabels.join('、')}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                          {record.content || record.icon || '无内容'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleEditTime(record)}
+                        className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-medium transition-colors whitespace-nowrap"
+                      >
+                        修改时间
+                      </button>
+                    </div>
+
+                    {/* 时间编辑表单 */}
+                    {editingRecord?.id === record.id && (
+                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              日期
+                            </label>
+                            <input
+                              type="date"
+                              value={newDate}
+                              onChange={(e) => setNewDate(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300/20 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              时间
+                            </label>
+                            <input
+                              type="time"
+                              value={newTime}
+                              onChange={(e) => setNewTime(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300/20 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleSaveTime}
+                            className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                          >
+                            保存
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingRecord(null);
+                              setNewDate('');
+                              setNewTime('');
+                            }}
+                            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors"
+                          >
+                            取消
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

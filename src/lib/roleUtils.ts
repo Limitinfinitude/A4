@@ -56,47 +56,47 @@ export function getRoleColor(roleId: Role): {
   text: string;
   border: string;
 } {
-  // 固定角色颜色（匹配原神角色主题色）
+  // 固定角色颜色（橙，蓝，黄，绿，紫，彩，灰，棕）
   const fixedColors: Record<FixedRole, { bg: string; text: string; border: string }> = {
     warm_companion: {
-      bg: 'bg-yellow-50 dark:bg-yellow-900/20',
-      text: 'text-yellow-600 dark:text-yellow-400',
-      border: 'border-yellow-200 dark:border-yellow-700',
+      bg: 'bg-orange-50 dark:bg-orange-900/20',
+      text: 'text-orange-600 dark:text-orange-400',
+      border: 'border-orange-400 dark:border-orange-500', // 橙 - 温暖陪伴者
     },
     rational_analyst: {
       bg: 'bg-blue-50 dark:bg-blue-900/20',
       text: 'text-blue-600 dark:text-blue-400',
-      border: 'border-blue-200 dark:border-blue-700',
+      border: 'border-blue-400 dark:border-blue-500', // 蓝 - 理性分析师
     },
     encouraging_supporter: {
-      bg: 'bg-green-50 dark:bg-green-900/20',
-      text: 'text-green-600 dark:text-green-400',
-      border: 'border-green-200 dark:border-green-700',
+      bg: 'bg-yellow-50 dark:bg-yellow-900/20',
+      text: 'text-yellow-600 dark:text-yellow-400',
+      border: 'border-yellow-400 dark:border-yellow-500', // 黄 - 鼓励支持者
     },
     practical_advisor: {
-      bg: 'bg-red-50 dark:bg-red-900/20',
-      text: 'text-red-600 dark:text-red-400',
-      border: 'border-red-200 dark:border-red-700',
+      bg: 'bg-green-50 dark:bg-green-900/20',
+      text: 'text-green-600 dark:text-green-400',
+      border: 'border-green-400 dark:border-green-500', // 绿 - 实用建议者
     },
     accepting_listener: {
-      bg: 'bg-cyan-50 dark:bg-cyan-900/20',
-      text: 'text-cyan-600 dark:text-cyan-400',
-      border: 'border-cyan-200 dark:border-cyan-700',
+      bg: 'bg-purple-50 dark:bg-purple-900/20',
+      text: 'text-purple-600 dark:text-purple-400',
+      border: 'border-purple-400 dark:border-purple-500', // 紫 - 加强边框
     },
     perspective_shifter: {
-      bg: 'bg-emerald-50 dark:bg-emerald-900/20',
-      text: 'text-emerald-600 dark:text-emerald-400',
-      border: 'border-emerald-200 dark:border-emerald-700',
+      bg: 'bg-pink-50 dark:bg-pink-900/20',
+      text: 'text-pink-600 dark:text-pink-400',
+      border: 'border-pink-400 dark:border-pink-500', // 彩（粉色/彩虹色） - 加强边框
     },
     problem_solver: {
-      bg: 'bg-slate-50 dark:bg-slate-900/20',
-      text: 'text-slate-600 dark:text-slate-400',
-      border: 'border-slate-200 dark:border-slate-700',
+      bg: 'bg-gray-50 dark:bg-gray-900/20',
+      text: 'text-gray-600 dark:text-gray-400',
+      border: 'border-gray-400 dark:border-gray-500', // 灰 - 加强边框
     },
     growth_guide: {
       bg: 'bg-amber-50 dark:bg-amber-900/20',
       text: 'text-amber-600 dark:text-amber-400',
-      border: 'border-amber-200 dark:border-amber-700',
+      border: 'border-amber-400 dark:border-amber-500', // 棕（琥珀色） - 加强边框
     },
   };
 
@@ -104,11 +104,33 @@ export function getRoleColor(roleId: Role): {
     return fixedColors[roleId as FixedRole];
   }
 
-  // 自定义角色使用默认颜色
-  return {
-    bg: 'bg-gray-50 dark:bg-gray-900/20',
-    text: 'text-gray-600 dark:text-gray-400',
-    border: 'border-gray-200 dark:border-gray-700',
+  // 8种主题色定义（橙，蓝，黄，绿，紫，彩，灰，棕）
+  const colorPalette: Record<string, { bg: string; text: string; border: string }> = {
+    orange: { bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-600 dark:text-orange-400', border: 'border-orange-400 dark:border-orange-500' },
+    blue: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-400 dark:border-blue-500' },
+    yellow: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-600 dark:text-yellow-400', border: 'border-yellow-400 dark:border-yellow-500' },
+    green: { bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-600 dark:text-green-400', border: 'border-green-400 dark:border-green-500' },
+    purple: { bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-600 dark:text-purple-400', border: 'border-purple-400 dark:border-purple-500' },
+    pink: { bg: 'bg-pink-50 dark:bg-pink-900/20', text: 'text-pink-600 dark:text-pink-400', border: 'border-pink-400 dark:border-pink-500' },
+    gray: { bg: 'bg-gray-50 dark:bg-gray-900/20', text: 'text-gray-600 dark:text-gray-400', border: 'border-gray-400 dark:border-gray-500' },
+    amber: { bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-600 dark:text-amber-400', border: 'border-amber-400 dark:border-amber-500' },
   };
+
+  // 检查是否是自定义角色，并尝试获取其颜色设置
+  const customRole = getCustomRole(roleId);
+  if (customRole && customRole.color && customRole.color in colorPalette) {
+    return colorPalette[customRole.color];
+  }
+  
+  // 如果没有设置颜色或颜色无效，根据角色ID生成稳定的哈希值，确保同一角色总是相同颜色
+  const colorKeys = Object.keys(colorPalette);
+  let hash = 0;
+  for (let i = 0; i < roleId.length; i++) {
+    hash = ((hash << 5) - hash) + roleId.charCodeAt(i);
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  const colorIndex = Math.abs(hash) % colorKeys.length;
+  
+  return colorPalette[colorKeys[colorIndex]];
 }
 

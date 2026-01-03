@@ -67,7 +67,13 @@ export async function generateQuote(
       },
     ];
 
-    const aiResult = await callAI(messages, aiConfig);
+    // 合并配置，指定 JSON 响应格式
+    const finalConfig: AIConfig = {
+      ...aiConfig,
+      responseFormat: 'json',
+    };
+
+    const aiResult = await callAI(messages, finalConfig);
 
     console.log('生成一记一句 - 提取的内容：', aiResult.content);
     
@@ -76,7 +82,22 @@ export async function generateQuote(
       throw new Error('AI 返回内容为空');
     }
 
-    const parsed = JSON.parse(aiResult.content);
+    // 尝试解析 JSON，处理可能的格式问题
+    let parsed;
+    try {
+      // 去除可能的 markdown 代码块标记
+      let jsonContent = aiResult.content.trim();
+      if (jsonContent.startsWith('```json')) {
+        jsonContent = jsonContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (jsonContent.startsWith('```')) {
+        jsonContent = jsonContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      parsed = JSON.parse(jsonContent);
+    } catch (parseError) {
+      console.error('生成一记一句 - JSON 解析失败，原始内容：', aiResult.content);
+      throw new Error('AI 返回的内容不是有效的 JSON 格式，请重试');
+    }
 
     // 验证必需字段
     if (!parsed.emotionLabels || !Array.isArray(parsed.emotionLabels)) {
