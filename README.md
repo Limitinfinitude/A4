@@ -2,7 +2,7 @@
 
 > 一个基于 AI 的个性化情绪日记应用，通过多维度认知角色陪伴你记录心情，深入了解自己的情绪模式。
 
-## ✨ 核心亮点
+## ✨ 核心功能
 
 ### 🎭 多维度认知角色系统
 - **8 种固定角色**：从不同认知维度理解你的情绪（存在主义、行为主义、认知心理学等）
@@ -37,32 +37,66 @@
 - **首次引导**：动态引导页面，快速上手
 - **响应式设计**：完美适配桌面端和移动端
 
-## 界面预览
+## 📸 界面预览
+
+### 记录心情
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="./screenshots/文字记录.png" alt="文字记录" />
+      <p align="center"><em>文字输入模式</em></p>
+    </td>
+    <td width="50%">
+      <img src="./screenshots/心情图标.png" alt="心情图标" />
+      <p align="center"><em>心情图标模式</em></p>
+    </td>
+  </tr>
+</table>
+
+### AI 反馈与分析
 
 <div align="center">
-  <img src="./screenshots/1.png" alt="首页" width="800" />
-  <p><em>首页 - 记录心情</em></p>
+  <img src="./screenshots/反馈卡片.png" alt="反馈卡片" width="700" />
+  <p><em>个性化 AI 反馈卡片</em></p>
 </div>
 
-<div align="center">
-  <img src="./screenshots/2.png" alt="表情记录页面" width="800" />
-  <p><em>AI 反馈</em></p>
-</div>
+### 历史管理
 
 <div align="center">
-  <img src="./screenshots/3.png" alt="统计界面" width="800" />
-  <p><em>历史记录</em></p>
+  <img src="./screenshots/历史记录.png" alt="历史记录" width="700" />
+  <p><em>历史记录管理 - 筛选、编辑、删除</em></p>
 </div>
 
-<div align="center">
-  <img src="./screenshots/4.png" alt="历史记录页面" width="800" />
-  <p><em>统计与洞察</em></p>
-</div>
+### 数据统计与洞察
 
-<div align="center">
-  <img src="./screenshots/5.png" alt="设置页面" width="800" />
-  <p><em>设置与备份</em></p>
-</div>
+<table>
+  <tr>
+    <td width="50%">
+      <img src="./screenshots/统计界面1.png" alt="统计界面1" />
+      <p align="center"><em>日历视图与线性统计</em></p>
+    </td>
+    <td width="50%">
+      <img src="./screenshots/统计界面2.png" alt="统计界面2" />
+      <p align="center"><em>扇形统计与数据洞察</em></p>
+    </td>
+  </tr>
+</table>
+
+### 调试与性能监控
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="./screenshots/调试界面.png" alt="调试界面" />
+      <p align="center"><em>AI 模型配置</em></p>
+    </td>
+    <td width="50%">
+      <img src="./screenshots/性能监控.png" alt="性能监控" />
+      <p align="center"><em>性能监控与调试日志</em></p>
+    </td>
+  </tr>
+</table>
 
 ## 快速开始
 
