@@ -76,9 +76,9 @@ export default function HistoryPage() {
   const filteredHistory = useMemo(() => {
     if (!timeFilteredHistory) return [];
     return timeFilteredHistory.filter((record) => {
-      if (filterRole !== 'all' && record.role !== filterRole) return false;
-      return true;
-    });
+    if (filterRole !== 'all' && record.role !== filterRole) return false;
+    return true;
+  });
   }, [timeFilteredHistory, filterRole]);
 
   // 开始编辑记录
@@ -355,7 +355,7 @@ export default function HistoryPage() {
                           className="w-10 h-10 rounded-full object-cover"
                         />
                       ) : (
-                        <span className="text-2xl">{roleInfo.emoji}</span>
+                      <span className="text-2xl">{roleInfo.emoji}</span>
                       )}
                       <div>
                         <p className={`font-semibold ${roleColors.text}`}>
@@ -392,13 +392,13 @@ export default function HistoryPage() {
                           </button>
                         </>
                       )}
-                      <button
-                        onClick={() => handleDelete(record.id)}
+                    <button
+                      onClick={() => handleDelete(record.id)}
                         className="flex items-center gap-1 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                      >
+                    >
                         <span>🗑️</span>
                         <span>删除</span>
-                      </button>
+                    </button>
                     </div>
                   </div>
 
@@ -439,17 +439,17 @@ export default function HistoryPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="mb-4 bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                  <div className="mb-4 bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
                       {isIconRecord ? (
                         <div className="text-center">
                           <span className="text-6xl">{record.content}</span>
                         </div>
                       ) : (
-                        <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-sm whitespace-pre-wrap">
-                          {record.content}
-                        </p>
+                    <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-sm whitespace-pre-wrap">
+                      {record.content}
+                    </p>
                       )}
-                    </div>
+                  </div>
                   )}
 
                   {/* 角色回应 */}
@@ -472,11 +472,11 @@ export default function HistoryPage() {
                             </span>
                           ))}
                         </div>
-                      </div>
+                  </div>
                       <div className="sm:max-w-xs">
                         <p className="text-sm text-gray-600 dark:text-gray-400 italic">
                           ✨ {record.feedback.slogan}
-                        </p>
+                    </p>
                       </div>
                     </div>
                   </div>
