@@ -302,12 +302,18 @@ function FeedbackContent() {
         )}
 
         {/* 操作按钮 */}
-      <div className="flex justify-center">
+      <div className="flex justify-center gap-4">
+          <button
+          className="px-8 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+            onClick={() => router.push('/')}
+          >
+          返回首页
+          </button>
           <button
           className="px-8 py-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-xl font-medium hover:bg-indigo-200 dark:hover:bg-indigo-900/40 transition-all"
             onClick={() => router.push('/history')}
           >
-          返回
+          查看历史
           </button>
         </div>
       </div>

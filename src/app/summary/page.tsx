@@ -249,9 +249,15 @@ export default function SummaryPage() {
   const lineInsightText = useMemo(() => {
     const now = new Date();
     let startDate: Date;
+    let endDate: Date = now;
+    let isHistoricalDate = false;
     
     if (linePeriod === 'day') {
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      // 如果有选中的日期，使用选中的日期，否则使用今天
+      const targetDate = selectedDate ? new Date(selectedDate) : now;
+      startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0);
+      endDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59);
+      isHistoricalDate = !!(selectedDate && selectedDate !== now.toISOString().split('T')[0]);
     } else if (linePeriod === 'week') {
       startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     } else {
@@ -260,7 +266,7 @@ export default function SummaryPage() {
     
     const periodRecords = history.filter((record) => {
       const recordDate = new Date(record.createTime);
-      return recordDate >= startDate && recordDate <= now;
+      return recordDate >= startDate && recordDate <= endDate;
     });
     
     const emotionCount: Record<string, number> = {};
@@ -271,14 +277,21 @@ export default function SummaryPage() {
     
     const dominantEmotion = Object.entries(emotionCount).sort((a, b) => b[1] - a[1])[0];
     
-    return generateInsightText({
+    // 如果是历史日期，修改文案中的"今天"为"这一天"
+    let insightText = generateInsightText({
       period: linePeriod,
       totalRecords: periodRecords.length,
       dominantEmotion: dominantEmotion?.[0] || '中性',
       dominantEmotionCount: dominantEmotion?.[1] || 0,
       emotionDistribution: emotionCount,
     });
-  }, [history, linePeriod]);
+    
+    if (isHistoricalDate && linePeriod === 'day') {
+      insightText = insightText.replace(/今天/g, '这一天');
+    }
+    
+    return insightText;
+  }, [history, linePeriod, selectedDate]);
 
   // 生成智能文案（扇形统计）
   const pieInsightText = useMemo(() => {
@@ -323,9 +336,10 @@ export default function SummaryPage() {
     let groupBy: 'hour' | 'day' = 'hour';
     
     if (linePeriod === 'day') {
-      // 今天的数据，按小时分组
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+      // 如果有选中的日期，使用选中的日期，否则使用今天
+      const targetDate = selectedDate ? new Date(selectedDate) : now;
+      startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0);
+      endDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59);
       groupBy = 'hour';
     } else if (linePeriod === 'week') {
       // 最近7天，按天分组
@@ -386,7 +400,7 @@ export default function SummaryPage() {
           count: records.length,
         };
       });
-  }, [history, linePeriod]);
+  }, [history, linePeriod, selectedDate]);
 
   // 扇形统计数据（天/周/月）
   const pieChartData = useMemo(() => {
@@ -758,7 +772,10 @@ export default function SummaryPage() {
               </label>
               <div className="flex gap-2 flex-wrap">
                 <button
-                  onClick={() => setViewMode('calendar')}
+                  onClick={() => {
+                    setViewMode('calendar');
+                    setSelectedDate('');
+                  }}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                     viewMode === 'calendar'
                       ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
@@ -768,7 +785,13 @@ export default function SummaryPage() {
                   📅 日历视图
                 </button>
                 <button
-                  onClick={() => setViewMode('line')}
+                  onClick={() => {
+                    // 如果从日历点击进入的，保留 selectedDate；否则清除
+                    if (viewMode !== 'calendar') {
+                      setSelectedDate('');
+                    }
+                    setViewMode('line');
+                  }}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                     viewMode === 'line'
                       ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
@@ -778,7 +801,10 @@ export default function SummaryPage() {
                   📊 线性统计
                 </button>
                 <button
-                  onClick={() => setViewMode('pie')}
+                  onClick={() => {
+                    setViewMode('pie');
+                    setSelectedDate('');
+                  }}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                     viewMode === 'pie'
                       ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
@@ -788,7 +814,10 @@ export default function SummaryPage() {
                   🥧 扇形统计
                 </button>
                 <button
-                  onClick={() => setViewMode('trend')}
+                  onClick={() => {
+                    setViewMode('trend');
+                    setSelectedDate('');
+                  }}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                     viewMode === 'trend'
                       ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
@@ -807,7 +836,11 @@ export default function SummaryPage() {
                 </label>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setLinePeriod('day')}
+                    onClick={() => {
+                      setLinePeriod('day');
+                      // 清除选中日期，显示今天
+                      setSelectedDate('');
+                    }}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                       linePeriod === 'day'
                         ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
@@ -817,7 +850,10 @@ export default function SummaryPage() {
                     天
                   </button>
                   <button
-                    onClick={() => setLinePeriod('week')}
+                    onClick={() => {
+                      setLinePeriod('week');
+                      setSelectedDate('');
+                    }}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                       linePeriod === 'week'
                         ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
@@ -827,7 +863,10 @@ export default function SummaryPage() {
                     周
                   </button>
                   <button
-                    onClick={() => setLinePeriod('month')}
+                    onClick={() => {
+                      setLinePeriod('month');
+                      setSelectedDate('');
+                    }}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                       linePeriod === 'month'
                         ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
@@ -1017,7 +1056,12 @@ export default function SummaryPage() {
             {lineChartData.length > 0 ? (
               <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 mb-6 border border-gray-200 dark:border-gray-700">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                  线性统计 - {linePeriod === 'day' ? '今天' : linePeriod === 'week' ? '本周' : '本月'}
+                  线性统计 - {linePeriod === 'day' 
+                    ? (selectedDate && selectedDate !== new Date().toISOString().split('T')[0]
+                        ? new Date(selectedDate).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })
+                        : '今天'
+                      )
+                    : linePeriod === 'week' ? '本周' : '本月'}
                 </h2>
                 <ResponsiveContainer width="100%" height={350}>
                   <LineChart data={lineChartData}>
