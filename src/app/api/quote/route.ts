@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateQuote } from '@/lib/generateQuote';
+import type { AIConfig } from '@/lib/aiClient';
 
 /**
  * POST /api/quote
@@ -7,13 +8,14 @@ import { generateQuote } from '@/lib/generateQuote';
  * 
  * 请求体：
  * {
- *   "moodIcon": "😊" // 心情图标
+ *   "moodIcon": "😊", // 心情图标
+ *   "aiConfig": [可选] AI 配置
  * }
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { moodIcon } = body;
+    const { moodIcon, aiConfig } = body;
 
     // 参数验证
     if (!moodIcon || typeof moodIcon !== 'string') {
@@ -23,7 +25,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await generateQuote(moodIcon);
+    const result = await generateQuote(moodIcon, aiConfig as AIConfig);
     return NextResponse.json(result);
   } catch (error) {
     console.error('生成一记一句失败：', error);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateSummary, type SummaryData } from '@/lib/generateSummary';
+import type { AIConfig } from '@/lib/aiClient';
 
 /**
  * POST /api/summary
@@ -7,13 +8,14 @@ import { generateSummary, type SummaryData } from '@/lib/generateSummary';
  * 
  * 请求体：
  * {
- *   "summaryData": WeekSummaryData
+ *   "summaryData": WeekSummaryData,
+ *   "aiConfig": [可选] AI 配置
  * }
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { summaryData } = body;
+    const { summaryData, aiConfig } = body;
 
     // 参数验证
     if (!summaryData || typeof summaryData !== 'object') {
@@ -24,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 生成总结
-    const summary = await generateSummary(summaryData as SummaryData);
+    const summary = await generateSummary(summaryData as SummaryData, aiConfig as AIConfig);
     
     return NextResponse.json({ summary });
   } catch (error) {

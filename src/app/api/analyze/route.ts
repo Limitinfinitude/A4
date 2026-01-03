@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeMood, analyzeMoodStream, type MoodAnalysisResult, type Role, type CustomRole } from '@/lib/analyzeMood';
+import type { AIConfig } from '@/lib/aiClient';
 
 /**
  * POST /api/analyze
@@ -11,12 +12,27 @@ import { analyzeMood, analyzeMoodStream, type MoodAnalysisResult, type Role, typ
  *   "role": "固定角色ID或自定义角色ID",
  *   "customRoles": [可选] 自定义角色列表
  *   "stream": false // 可选，是否使用流式输出
+ *   "aiConfig": [可选] AI 配置（模式、API Key、模型名称等）
  * }
  */
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  console.log(`[API /analyze] 收到请求，时间: ${new Date().toISOString()}`);
+  
   try {
+    const parseStart = Date.now();
     const body = await request.json();
-    const { content, role, customRoles, stream } = body;
+    const parseEnd = Date.now();
+    console.log(`[API /analyze] JSON 解析耗时: ${parseEnd - parseStart}ms`);
+    
+    const { content, role, customRoles, stream, aiConfig } = body;
+    console.log(`[API /analyze] 参数:`, {
+      contentLength: content?.length,
+      role,
+      hasCustomRoles: !!customRoles,
+      stream,
+      aiMode: aiConfig?.mode,
+    });
 
     // 参数验证
     if (!content || typeof content !== 'string') {
@@ -86,7 +102,23 @@ export async function POST(request: NextRequest) {
     }
 
     // 非流式输出
-    const result = await analyzeMood(content, role as Role, customRoles as CustomRole[]);
+    const aiStart = Date.now();
+    console.log(`[API /analyze] 开始调用 analyzeMood`);
+    
+    const result = await analyzeMood(
+      content, 
+      role as Role, 
+      customRoles as CustomRole[], 
+      stream,
+      aiConfig as AIConfig
+    );
+    
+    const aiEnd = Date.now();
+    console.log(`[API /analyze] analyzeMood 完成，耗时: ${aiEnd - aiStart}ms`);
+    
+    const totalTime = Date.now() - startTime;
+    console.log(`[API /analyze] 总耗时: ${totalTime}ms`);
+    
     return NextResponse.json(result);
   } catch (error) {
     console.error('分析情绪失败：', error);

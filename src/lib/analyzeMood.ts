@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { getModelName } from './config';
+import { callAI, type AIConfig, type AIResult } from './aiClient';
 
 // 定义12种内置情绪标签
 export const EMOTION_TAGS = {
@@ -50,6 +51,11 @@ export interface MoodAnalysisResult {
   emotionTag: EmotionTag; // 内部标准情绪标签（用于统计，不对外显示）
   feedback: string; // 选定角色的反馈内容
   slogan: string;
+  tokens?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
 }
 
 // 固定角色定义 - 每个角色关注不同的认知维度，匹配原神角色
@@ -261,6 +267,26 @@ function getOpenAIClient() {
   });
 }
 
+// 获取 API Key（客户端从 localStorage 读取，服务器端从环境变量读取）
+export function getAPIKey(): string {
+  if (typeof window === 'undefined') {
+    // 服务器端
+    return process.env.OPENAI_API_KEY || '';
+  }
+  
+  // 客户端
+  try {
+    const apiKey = localStorage.getItem('debug_api_key');
+    if (apiKey) {
+      return apiKey;
+    }
+  } catch (error) {
+    console.warn('无法访问 localStorage，使用环境变量');
+  }
+  
+  return process.env.OPENAI_API_KEY || '';
+}
+
 /**
  * 获取角色信息（固定角色或自定义角色）
  */
@@ -312,21 +338,28 @@ function getRoleInfo(role: Role, customRoles?: CustomRole[]): {
  * @param role 选择的角色（固定角色ID或自定义角色ID）
  * @param customRoles 自定义角色列表（可选）
  * @param stream 是否使用流式输出（可选）
+ * @param aiConfig AI 配置（可选，如果不提供则从 localStorage 读取）
  * @returns 情绪分析结果
  */
 export async function analyzeMood(
   content: string,
   role: Role,
   customRoles?: CustomRole[],
-  stream?: boolean
+  stream?: boolean,
+  aiConfig?: AIConfig
 ): Promise<MoodAnalysisResult> {
+  const startTime = Date.now();
+  console.log(`[analyzeMood] 开始分析，时间: ${new Date().toISOString()}`);
+  
   // 参数验证
   if (!content || !role) {
     throw new Error('日记内容和角色选择不能为空');
   }
 
   try {
+    const roleInfoStart = Date.now();
     const roleInfo = getRoleInfo(role, customRoles);
+    console.log(`[analyzeMood] 获取角色信息耗时: ${Date.now() - roleInfoStart}ms`);
     const emotionTagList = Object.values(EMOTION_TAGS)
       .map(tag => `${tag.en} - ${tag.zh}`)
       .join('、');
@@ -393,61 +426,46 @@ ${rolePromptSection}
   "slogan": "一记一句"
 }`;
 
-    if (stream) {
-      // 流式输出模式
-      const openai = getOpenAIClient();
-      const streamResponse = await openai.chat.completions.create({
-        model: getModelName(),
-        messages: [
-          {
-            role: 'system',
-            content: `你是一位专业的情绪分析师，擅长从日记中提取深层情绪。你需要使用角色的设定和语气风格来回应（参考原神角色风格，但不要带入角色身份）。请始终以JSON格式输出结果。`,
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        temperature: 0.75,
-        stream: true,
-        response_format: { type: 'json_object' },
-      });
+    // 使用统一的 AI 客户端
+    const messages = [
+      {
+        role: 'system' as const,
+        content: `你是一位专业的情绪分析师，擅长从日记中提取深层情绪。你需要使用角色的设定和语气风格来回应（参考原神角色风格，但不要带入角色身份）。请始终以JSON格式输出结果。`,
+      },
+      {
+        role: 'user' as const,
+        content: prompt,
+      },
+    ];
 
-      // 收集流式响应
-      let fullResponse = '';
-      for await (const chunk of streamResponse) {
-        const content = chunk.choices[0]?.delta?.content || '';
-        fullResponse += content;
-      }
+    // 调用 AI（自动根据模式选择 API 或 Ollama）
+    const aiCallStart = Date.now();
+    console.log(`[analyzeMood] 开始调用 AI，Prompt 长度: ${prompt.length} 字符`);
+    
+    const aiResult = await callAI(messages, aiConfig);
+    
+    const aiCallEnd = Date.now();
+    console.log(`[analyzeMood] AI 调用完成，耗时: ${aiCallEnd - aiCallStart}ms`);
+    console.log(`[analyzeMood] 响应长度: ${aiResult.content?.length || 0} 字符`);
 
-      // 解析JSON响应
-      return parseResponse(fullResponse);
-    } else {
-      // 非流式输出模式
-      const openai = getOpenAIClient();
-      const response = await openai.chat.completions.create({
-        model: getModelName(),
-        messages: [
-          {
-            role: 'system',
-            content: `你是一位专业的情绪分析师，擅长从日记中提取深层情绪。你需要使用角色的设定和语气风格来回应（参考原神角色风格，但不要带入角色身份）。请始终以JSON格式输出结果。`,
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        temperature: 0.75,
-        response_format: { type: 'json_object' },
-      });
-
-      const content = response.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error('API 返回内容为空');
-      }
-
-      return parseResponse(content);
+    if (!aiResult.content) {
+      throw new Error('AI 返回内容为空');
     }
+
+    const parseStart = Date.now();
+    const result = parseResponse(aiResult.content);
+    const parseEnd = Date.now();
+    console.log(`[analyzeMood] 解析响应耗时: ${parseEnd - parseStart}ms`);
+    
+    // 添加 token 信息
+    if (aiResult.tokens) {
+      result.tokens = aiResult.tokens;
+    }
+    
+    const totalTime = Date.now() - startTime;
+    console.log(`[analyzeMood] 总耗时: ${totalTime}ms`);
+    
+    return result;
   } catch (error) {
     // 错误处理
     if (error instanceof OpenAI.APIError) {

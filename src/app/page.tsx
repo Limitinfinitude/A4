@@ -84,9 +84,24 @@ export default function Home() {
     }
     
     setLoading(true);
+    
+    // 创建性能计时器
+    const { PerformanceTimer } = await import('@/lib/performanceLogger');
+    const { getClientAIConfig } = await import('@/lib/clientConfig');
+    
+    const customRoles = JSON.parse(localStorage.getItem('custom_roles') || '[]');
+    const aiConfig = getClientAIConfig();
+    
+    const perfTimer = new PerformanceTimer('analyze', {
+      contentLength: 1,
+      role: selectedRole,
+      mode: aiConfig.mode,
+      modelName: aiConfig.mode === 'api' ? aiConfig.modelName : aiConfig.ollamaModel,
+    });
+    
     try {
-      const customRoles = JSON.parse(localStorage.getItem('custom_roles') || '[]');
       
+      perfTimer.startStage('API 请求');
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -94,14 +109,17 @@ export default function Home() {
           content: selectedIcon,
           role: selectedRole,
           customRoles: customRoles,
+          aiConfig,
         }),
       });
+      perfTimer.endStage();
 
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.error || '分析失败');
       }
 
+      perfTimer.startStage('处理响应');
       const data = await res.json();
       // 获取角色信息用于快照
       const roleInfo = getRoleInfo(selectedRole);
@@ -125,12 +143,19 @@ export default function Home() {
       const history = JSON.parse(localStorage.getItem('mood_history') || '[]');
       history.unshift(moodRecord);
       localStorage.setItem('mood_history', JSON.stringify(history));
+      perfTimer.endStage();
+      
+      // 记录成功（包含 token 信息）
+      perfTimer.finish(true, undefined, data.tokens);
+      
       setSelectedIcon('');
       setShowIconModal(false);
 
       // 跳转到反馈页
       router.push(`/feedback?id=${moodRecord.id}`);
     } catch (error: any) {
+      // 记录失败
+      perfTimer.finish(false, error.message || '分析失败');
       alert(error.message || '分析失败，请检查网络或API密钥～');
     } finally {
       setLoading(false);
@@ -149,7 +174,24 @@ export default function Home() {
     const finalRole = selectedRole || 'warm_companion';
     
     setLoading(true);
+    
+    // 创建性能计时器
+    const { PerformanceTimer } = await import('@/lib/performanceLogger');
+    const { getClientAIConfig } = await import('@/lib/clientConfig');
+    
+    const aiConfig = getClientAIConfig();
+    
+    // 创建性能计时器（在获取配置后，这样可以记录模式和模型名称）
+    const perfTimer = new PerformanceTimer('analyze', {
+      contentLength: finalContent.length,
+      role: finalRole,
+      mode: aiConfig.mode,
+      modelName: aiConfig.mode === 'api' ? aiConfig.modelName : aiConfig.ollamaModel,
+    });
+    
     try {
+      
+      perfTimer.startStage('API 请求');
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -157,15 +199,18 @@ export default function Home() {
           content: finalContent, 
           role: finalRole,
           customRoles: customRoles.length > 0 ? customRoles : undefined,
-          stream: false
+          stream: false,
+          aiConfig,
         }),
       });
+      perfTimer.endStage();
 
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.error || 'AI分析失败');
       }
 
+      perfTimer.startStage('处理响应');
       const data = await res.json();
       
       // 获取角色快照信息，即使角色将来被删除也能显示
@@ -206,15 +251,22 @@ export default function Home() {
       const history = JSON.parse(localStorage.getItem('mood_history') || '[]');
       history.unshift(moodRecord);
       localStorage.setItem('mood_history', JSON.stringify(history));
-        localStorage.removeItem('mood_draft');
-        localStorage.removeItem('mood_draft_icon');
-        localStorage.removeItem('mood_draft_mode');
-        setContent('');
-        setSelectedRole('');
+      localStorage.removeItem('mood_draft');
+      localStorage.removeItem('mood_draft_icon');
+      localStorage.removeItem('mood_draft_mode');
+      perfTimer.endStage();
+      
+      // 记录成功（包含 token 信息）
+      perfTimer.finish(true, undefined, data.tokens);
+      
+      setContent('');
+      setSelectedRole('');
 
       // 跳转到反馈页
       router.push(`/feedback?id=${moodRecord.id}`);
     } catch (error: any) {
+      // 记录失败
+      perfTimer.finish(false, error.message || '提交失败');
       alert(error.message || '提交失败，请检查网络或API密钥～');
     } finally {
       setLoading(false);
@@ -496,20 +548,23 @@ export default function Home() {
           {/* 心情图标选择模式 */}
           {inputMode === 'icon' && (
             <div className="mt-4">
-              <div className="grid grid-cols-6 gap-2">
-                {MOOD_ICONS.map((icon) => (
-                  <button
-                    key={icon}
-                    onClick={() => {
-                      setSelectedIcon(icon);
-                      setShowIconModal(true);
-                    }}
-                    className="aspect-square rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-600 hover:scale-105 transition-all flex items-center justify-center"
-                    disabled={loading}
-                  >
-                    <span className="text-3xl">{icon}</span>
-                  </button>
-                ))}
+              {/* 限制最大宽度，电脑端居中显示 */}
+              <div className="max-w-2xl mx-auto">
+                <div className="grid grid-cols-6 gap-2">
+                  {MOOD_ICONS.map((icon) => (
+                    <button
+                      key={icon}
+                      onClick={() => {
+                        setSelectedIcon(icon);
+                        setShowIconModal(true);
+                      }}
+                      className="aspect-square rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-600 hover:scale-105 transition-all flex items-center justify-center"
+                      disabled={loading}
+                    >
+                      <span className="text-2xl sm:text-3xl">{icon}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}

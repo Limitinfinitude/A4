@@ -1,17 +1,7 @@
 import OpenAI from 'openai';
 import { getModelName } from './config';
-import { EMOTION_TAGS } from './analyzeMood';
-
-// 获取 OpenAI 客户端（延迟初始化）
-function getOpenAIClient() {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error('OPENAI_API_KEY 环境变量未设置');
-  }
-  return new OpenAI({
-    apiKey,
-  });
-}
+import { EMOTION_TAGS, getAPIKey } from './analyzeMood';
+import { callAI, type AIConfig, type AIResult } from './aiClient';
 
 // 周期对比数据
 export interface PeriodComparison {
@@ -69,11 +59,13 @@ export interface SummaryData {
 /**
  * 生成情绪总结（近期3天、本周或本月）
  * @param summaryData 统计数据
+ * @param aiConfig AI 配置（可选，如果不提供则从 localStorage 读取）
  * @returns AI 生成的总结文本
  */
-export async function generateSummary(summaryData: SummaryData): Promise<string> {
-  const openai = getOpenAIClient();
-
+export async function generateSummary(
+  summaryData: SummaryData,
+  aiConfig?: AIConfig
+): Promise<string> {
   const periodTextMap = {
     recent: '近3天',
     week: '本周',
@@ -241,28 +233,23 @@ ${correctionText}
 直接输出总结文本，不要包含任何标题、编号或格式标记。`;
 
   try {
-    // 移除 max_completion_tokens 以兼容第三方 API
-    const response = await openai.chat.completions.create({
-      model: getModelName(),
-      messages: [
-        {
-          role: 'system',
-          content: '你是一位富有洞察力的情绪陪伴者，擅长用温暖、有深度的语言帮助用户理解自己的情绪。你遵守伦理边界，不做诊断和指导，只提供观察和陪伴。',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.75,
-    });
+    const messages = [
+      {
+        role: 'system' as const,
+        content: '你是一位富有洞察力的情绪陪伴者，擅长用温暖、有深度的语言帮助用户理解自己的情绪。你遵守伦理边界，不做诊断和指导，只提供观察和陪伴。',
+      },
+      {
+        role: 'user' as const,
+        content: prompt,
+      },
+    ];
 
-    const summary = response.choices[0]?.message?.content?.trim();
-    if (!summary) {
+    const aiResult = await callAI(messages, aiConfig);
+    if (!aiResult.content) {
       throw new Error('AI 返回内容为空');
     }
 
-    return summary;
+    return aiResult.content;
   } catch (error) {
     if (error instanceof OpenAI.APIError) {
       if (error.status === 401) {

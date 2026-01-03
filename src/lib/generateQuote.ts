@@ -1,24 +1,18 @@
 import OpenAI from 'openai';
 import { getModelName } from './config';
-import { EMOTION_TAGS, type EmotionTag } from './analyzeMood';
-
-// 获取 OpenAI 客户端（延迟初始化）
-function getOpenAIClient() {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error('OPENAI_API_KEY 环境变量未设置');
-  }
-  return new OpenAI({
-    apiKey,
-  });
-}
+import { EMOTION_TAGS, type EmotionTag, getAPIKey } from './analyzeMood';
+import { callAI, type AIConfig, type AIResult } from './aiClient';
 
 /**
  * 根据心情图标生成一记一句并分析情绪
  * @param moodIcon 心情图标（emoji）
+ * @param aiConfig AI 配置（可选，如果不提供则从 localStorage 读取）
  * @returns 包含一记一句、情绪标签和标准情绪标签的对象
  */
-export async function generateQuote(moodIcon: string): Promise<{
+export async function generateQuote(
+  moodIcon: string,
+  aiConfig?: AIConfig
+): Promise<{
   quote: string;
   emotionLabels: string[];
   emotionTag: EmotionTag;
@@ -28,7 +22,6 @@ export async function generateQuote(moodIcon: string): Promise<{
   }
 
   try {
-    const openai = getOpenAIClient();
     console.log('生成一记一句 - 输入图标：', moodIcon);
 
     const prompt = `用户选择了心情图标：${moodIcon}。
@@ -61,38 +54,29 @@ export async function generateQuote(moodIcon: string): Promise<{
   "quote": "一记一句"
 }`;
 
-    console.log('生成一记一句 - 使用模型：', getModelName());
     console.log('生成一记一句 - Prompt：', prompt);
 
-    const requestParams: any = {
-      model: getModelName(),
-      messages: [
-        {
-          role: 'system',
-          content: '你是一位专业的情绪分析师，擅长分析表情所代表的情绪，并生成温暖的话语。请根据用户选择的表情，分析情绪并生成一记一句。',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.8,
-      response_format: { type: 'json_object' },
-    };
+    const messages = [
+      {
+        role: 'system' as const,
+        content: '你是一位专业的情绪分析师，擅长分析表情所代表的情绪，并生成温暖的话语。请根据用户选择的表情，分析情绪并生成一记一句。',
+      },
+      {
+        role: 'user' as const,
+        content: prompt,
+      },
+    ];
 
-    const response = await openai.chat.completions.create(requestParams);
+    const aiResult = await callAI(messages, aiConfig);
 
-    console.log('生成一记一句 - API 响应：', JSON.stringify(response, null, 2));
-
-    const content = response.choices[0]?.message?.content?.trim();
-    console.log('生成一记一句 - 提取的内容：', content);
+    console.log('生成一记一句 - 提取的内容：', aiResult.content);
     
-    if (!content) {
-      console.error('生成一记一句 - AI 返回内容为空，完整响应：', JSON.stringify(response, null, 2));
+    if (!aiResult.content) {
+      console.error('生成一记一句 - AI 返回内容为空');
       throw new Error('AI 返回内容为空');
     }
 
-    const parsed = JSON.parse(content);
+    const parsed = JSON.parse(aiResult.content);
 
     // 验证必需字段
     if (!parsed.emotionLabels || !Array.isArray(parsed.emotionLabels)) {

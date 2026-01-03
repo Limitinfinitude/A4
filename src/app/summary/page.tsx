@@ -22,6 +22,62 @@ function getEmotionDisplayName(emotionTag: string): string {
   return firstWord;
 }
 
+// 根据数据生成智能文案
+function generateInsightText(data: {
+  period: 'day' | 'week' | 'month';
+  totalRecords: number;
+  dominantEmotion: string;
+  dominantEmotionCount: number;
+  emotionDistribution: Record<string, number>;
+}): string {
+  const { period, totalRecords, dominantEmotion, dominantEmotionCount, emotionDistribution } = data;
+  
+  if (totalRecords === 0) {
+    return period === 'day' 
+      ? '今天还没有记录心情哦，快去记录一下吧！' 
+      : period === 'week' 
+      ? '本周还没有记录心情哦，快去记录一下吧！'
+      : '本月还没有记录心情哦，快去记录一下吧！';
+  }
+  
+  const periodText = period === 'day' ? '今天' : period === 'week' ? '本周' : '本月';
+  const dominantRatio = (dominantEmotionCount / totalRecords) * 100;
+  
+  // 定义积极、消极情绪
+  const positiveEmotions = ['喜悦', '满足', '希望', '平静'];
+  const negativeEmotions = ['悲伤', '愤怒', '焦虑', '恐惧', '挫败', '疲惫'];
+  
+  const isPositive = positiveEmotions.includes(dominantEmotion);
+  const isNegative = negativeEmotions.includes(dominantEmotion);
+  
+  // 计算情绪多样性
+  const emotionCount = Object.keys(emotionDistribution).length;
+  
+  // 生成文案
+  let text = '';
+  
+  if (isPositive && dominantRatio > 60) {
+    text = `${periodText}你的情绪不错！${dominantEmotion}占比${dominantRatio.toFixed(0)}%，继续保持这份美好心情吧！`;
+  } else if (isNegative && dominantRatio > 60) {
+    text = `${periodText}你的${dominantEmotion}情绪占比${dominantRatio.toFixed(0)}%，请注意调节心情，适当放松一下。`;
+  } else if (emotionCount >= 5) {
+    text = `${periodText}你的情绪比较多样化，记录了${emotionCount}种不同的情绪，这说明你的生活丰富多彩。`;
+  } else if (dominantRatio > 40) {
+    text = `${periodText}你的主要情绪是${dominantEmotion}（${dominantRatio.toFixed(0)}%），整体情绪较为稳定。`;
+  } else {
+    text = `${periodText}你记录了${totalRecords}次心情，情绪分布较为均衡，保持这份平和吧！`;
+  }
+  
+  // 添加记录数提示
+  if (totalRecords < 3 && period === 'day') {
+    text += ' 今天的记录还比较少，可以多记录几次哦！';
+  } else if (totalRecords >= 10 && period === 'day') {
+    text += ' 今天记录了很多次，真是用心在记录生活呢！';
+  }
+  
+  return text;
+}
+
 // 类型定义
 type MoodAnalysisResult = {
   keyWords: string[];
@@ -39,21 +95,42 @@ type MoodRecord = {
   originalEmotionTag?: string; // 原始情绪标签（用户修正前）
 };
 
-type ViewMode = 'daily' | 'overview' | 'trend';
+type ViewMode = 'line' | 'pie' | 'trend' | 'calendar';
+type TimePeriod = 'day' | 'week' | 'month';
+
+// 日历日期类型
+type CalendarDay = {
+  date: Date;
+  dateStr: string;
+  isCurrentMonth: boolean;
+  moodStatus: 'none' | 'positive' | 'negative' | 'neutral';
+  recordCount: number;
+};
 
 export default function SummaryPage() {
   const [history, setHistory] = useState<MoodRecord[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>('daily');
+  const [viewMode, setViewMode] = useState<ViewMode>('calendar');
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [summaryPeriod, setSummaryPeriod] = useState<'recent' | 'week' | 'month'>('recent');
   const [recentSummary, setRecentSummary] = useState<string>('');
   const [weekSummary, setWeekSummary] = useState<string>('');
   const [monthSummary, setMonthSummary] = useState<string>('');
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
+  const [linePeriod, setLinePeriod] = useState<TimePeriod>('day');
+  const [piePeriod, setPiePeriod] = useState<TimePeriod>('day');
+  const [showGuide, setShowGuide] = useState(false);
+  const [guideStep, setGuideStep] = useState(0);
 
   useEffect(() => {
     const savedHistory = JSON.parse(localStorage.getItem('mood_history') || '[]') as MoodRecord[];
     setHistory(savedHistory);
+    
+    // 检查是否首次访问统计页面
+    const hasVisitedSummary = localStorage.getItem('has_visited_summary');
+    if (!hasVisitedSummary) {
+      setShowGuide(true);
+    }
   }, []);
 
   // 情绪强度映射
@@ -77,6 +154,87 @@ export default function SummaryPage() {
     return getEmotionColorHex(emotionTag as any);
   };
 
+  // 计算日历数据
+  const calculateCalendarData = useMemo((): CalendarDay[] => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    
+    // 获取当月第一天和最后一天
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    
+    // 获取第一天是星期几（0-6，0是周日）
+    const firstDayOfWeek = firstDay.getDay();
+    
+    // 计算需要显示的日期范围（包括上月和下月的日期）
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDayOfWeek);
+    
+    const days: CalendarDay[] = [];
+    const currentDate = new Date(startDate);
+    
+    // 生成6周的日期（42天）
+    for (let i = 0; i < 42; i++) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      const isCurrentMonth = currentDate.getMonth() === month;
+      
+      // 获取当天的记录
+      const dayRecords = history.filter((record) => {
+        const recordDate = new Date(record.createTime).toISOString().split('T')[0];
+        return recordDate === dateStr;
+      });
+      
+      let moodStatus: 'none' | 'positive' | 'negative' | 'neutral' = 'none';
+      
+      if (dayRecords.length > 0) {
+        // 定义积极、消极和中性情绪
+        const positiveEmotions = ['joy', 'satisfaction', 'hope', 'calm'];
+        const negativeEmotions = ['sadness', 'anger', 'anxiety', 'fear', 'frustration', 'tired'];
+        const neutralEmotions = ['neutral', 'surprise'];
+        
+        let positiveCount = 0;
+        let negativeCount = 0;
+        let neutralCount = 0;
+        
+        dayRecords.forEach((record) => {
+          const emotion = record.feedback.emotionTag;
+          if (positiveEmotions.includes(emotion)) {
+            positiveCount++;
+          } else if (negativeEmotions.includes(emotion)) {
+            negativeCount++;
+          } else {
+            neutralCount++;
+          }
+        });
+        
+        // 计算占比并确定主导情绪
+        const total = dayRecords.length;
+        const positiveRatio = positiveCount / total;
+        const negativeRatio = negativeCount / total;
+        
+        if (positiveRatio > 0.5) {
+          moodStatus = 'positive';
+        } else if (negativeRatio > 0.5) {
+          moodStatus = 'negative';
+        } else {
+          moodStatus = 'neutral';
+        }
+      }
+      
+      days.push({
+        date: new Date(currentDate),
+        dateStr,
+        isCurrentMonth,
+        moodStatus,
+        recordCount: dayRecords.length,
+      });
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return days;
+  }, [history, calendarMonth]);
+
   // 获取所有可用的日期
   const availableDates = useMemo(() => {
     const dates = new Set<string>();
@@ -95,43 +253,172 @@ export default function SummaryPage() {
     }
   }, [availableDates, selectedDate]);
 
-  // 1️⃣ 当天视图（Detail View）
-  const dailyDetailData = useMemo(() => {
-    if (!selectedDate) return [];
+  // 生成智能文案（线性统计）
+  const lineInsightText = useMemo(() => {
+    const now = new Date();
+    let startDate: Date;
     
-    const dayRecords = history
-      .filter((record) => {
-        const recordDate = new Date(record.createTime).toISOString().split('T')[0];
-        return recordDate === selectedDate;
-      })
-      .sort((a, b) => new Date(a.createTime).getTime() - new Date(b.createTime).getTime());
-
-    return dayRecords.map((record) => {
-      const date = new Date(record.createTime);
-      // 包含秒，避免同一分钟内的记录重叠
-      const timeWindow = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
-      const intensity = Math.abs(emotionIntensityMap[record.feedback.emotionTag] || 0);
-      
-      return {
-        timeWindow,
-        intensity,
-        dominant_emotion: getEmotionDisplayName(record.feedback.emotionTag),
-        emotionTag: record.feedback.emotionTag,
-      };
+    if (linePeriod === 'day') {
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    } else if (linePeriod === 'week') {
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    } else {
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+    
+    const periodRecords = history.filter((record) => {
+      const recordDate = new Date(record.createTime);
+      return recordDate >= startDate && recordDate <= now;
     });
-  }, [history, selectedDate]);
-
-  // 2️⃣ 单日概览
-  const dailyOverviewData = useMemo(() => {
-    if (!selectedDate) return [];
     
-    const dayRecords = history.filter((record) => {
-      const recordDate = new Date(record.createTime).toISOString().split('T')[0];
-      return recordDate === selectedDate;
+    const emotionCount: Record<string, number> = {};
+    periodRecords.forEach((record) => {
+      const emotionName = getEmotionDisplayName(record.feedback.emotionTag);
+      emotionCount[emotionName] = (emotionCount[emotionName] || 0) + 1;
+    });
+    
+    const dominantEmotion = Object.entries(emotionCount).sort((a, b) => b[1] - a[1])[0];
+    
+    return generateInsightText({
+      period: linePeriod,
+      totalRecords: periodRecords.length,
+      dominantEmotion: dominantEmotion?.[0] || '中性',
+      dominantEmotionCount: dominantEmotion?.[1] || 0,
+      emotionDistribution: emotionCount,
+    });
+  }, [history, linePeriod]);
+
+  // 生成智能文案（扇形统计）
+  const pieInsightText = useMemo(() => {
+    const now = new Date();
+    let startDate: Date;
+    
+    if (piePeriod === 'day') {
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    } else if (piePeriod === 'week') {
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    } else {
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+    
+    const periodRecords = history.filter((record) => {
+      const recordDate = new Date(record.createTime);
+      return recordDate >= startDate && recordDate <= now;
+    });
+    
+    const emotionCount: Record<string, number> = {};
+    periodRecords.forEach((record) => {
+      const emotionName = getEmotionDisplayName(record.feedback.emotionTag);
+      emotionCount[emotionName] = (emotionCount[emotionName] || 0) + 1;
+    });
+    
+    const dominantEmotion = Object.entries(emotionCount).sort((a, b) => b[1] - a[1])[0];
+    
+    return generateInsightText({
+      period: piePeriod,
+      totalRecords: periodRecords.length,
+      dominantEmotion: dominantEmotion?.[0] || '中性',
+      dominantEmotionCount: dominantEmotion?.[1] || 0,
+      emotionDistribution: emotionCount,
+    });
+  }, [history, piePeriod]);
+
+  // 线性统计数据（天/周/月）
+  const lineChartData = useMemo(() => {
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date = now;
+    let groupBy: 'hour' | 'day' = 'hour';
+    
+    if (linePeriod === 'day') {
+      // 今天的数据，按小时分组
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+      groupBy = 'hour';
+    } else if (linePeriod === 'week') {
+      // 最近7天，按天分组
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      groupBy = 'day';
+    } else {
+      // 本月，按天分组
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      groupBy = 'day';
+    }
+    
+    const periodRecords = history.filter((record) => {
+      const recordDate = new Date(record.createTime);
+      return recordDate >= startDate && recordDate <= endDate;
+    });
+    
+    if (periodRecords.length === 0) return [];
+    
+    // 按时间分组
+    const groups: Record<string, MoodRecord[]> = {};
+    
+    periodRecords.forEach((record) => {
+      const date = new Date(record.createTime);
+      let key: string;
+      
+      if (groupBy === 'hour') {
+        key = `${String(date.getHours()).padStart(2, '0')}:00`;
+      } else {
+        key = `${date.getMonth() + 1}/${date.getDate()}`;
+      }
+      
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(record);
+    });
+    
+    return Object.entries(groups)
+      .sort(([a], [b]) => {
+        if (groupBy === 'hour') {
+          return parseInt(a) - parseInt(b);
+        }
+        return a.localeCompare(b);
+      })
+      .map(([key, records]) => {
+        const intensities = records.map(r => Math.abs(emotionIntensityMap[r.feedback.emotionTag] || 0));
+        const avgIntensity = intensities.reduce((a, b) => a + b, 0) / intensities.length;
+        
+        const emotionCount: Record<string, number> = {};
+        records.forEach((record) => {
+          emotionCount[record.feedback.emotionTag] = (emotionCount[record.feedback.emotionTag] || 0) + 1;
+        });
+        const dominantEmotion = Object.entries(emotionCount).sort((a, b) => b[1] - a[1])[0]?.[0] || 'neutral';
+        
+        return {
+          time: key,
+          intensity: Math.round(avgIntensity * 10) / 10,
+          dominant_emotion: getEmotionDisplayName(dominantEmotion),
+          emotionTag: dominantEmotion,
+          count: records.length,
+        };
+      });
+  }, [history, linePeriod]);
+
+  // 扇形统计数据（天/周/月）
+  const pieChartData = useMemo(() => {
+    const now = new Date();
+    let startDate: Date;
+    
+    if (piePeriod === 'day') {
+      // 今天
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    } else if (piePeriod === 'week') {
+      // 最近7天
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    } else {
+      // 本月
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+    
+    const periodRecords = history.filter((record) => {
+      const recordDate = new Date(record.createTime);
+      return recordDate >= startDate && recordDate <= now;
     });
 
     const emotionCount: Record<string, number> = {};
-    dayRecords.forEach((record) => {
+    periodRecords.forEach((record) => {
       const emotionName = getEmotionDisplayName(record.feedback.emotionTag);
       emotionCount[emotionName] = (emotionCount[emotionName] || 0) + 1;
     });
@@ -148,7 +435,7 @@ export default function SummaryPage() {
         emotionTag,
       };
     });
-  }, [history, selectedDate]);
+  }, [history, piePeriod]);
 
   // 3️⃣ 周/月趋势
   const trendData = useMemo(() => {
@@ -432,10 +719,13 @@ export default function SummaryPage() {
 
     setSummaryLoading(true);
     try {
+      const { getClientAIConfig } = await import('@/lib/clientConfig');
+      const aiConfig = getClientAIConfig();
+      
       const res = await fetch('/api/summary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ summaryData }),
+        body: JSON.stringify({ summaryData, aiConfig }),
       });
 
       if (!res.ok) {
@@ -459,8 +749,134 @@ export default function SummaryPage() {
     }
   };
 
+  // 引导步骤内容
+  const guideSteps = [
+    {
+      title: '欢迎来到统计页面！',
+      description: '这里可以查看和分析你的心情记录，了解情绪变化趋势',
+      icon: '👋',
+    },
+    {
+      title: '📅 日历视图',
+      description: '直观查看每天的心情状态，点击有记录的日期可以查看详情',
+      highlight: 'calendar',
+    },
+    {
+      title: '📊 线性统计',
+      description: '查看情绪强度的变化趋势，支持按天、周、月切换',
+      highlight: 'line',
+    },
+    {
+      title: '🥧 扇形统计',
+      description: '查看不同情绪的分布占比，了解情绪构成',
+      highlight: 'pie',
+    },
+    {
+      title: '🔍 AI 分析',
+      description: 'AI 会根据你的数据生成智能文案和深度分析报告',
+      highlight: 'ai',
+    },
+  ];
+
+  // 处理引导完成
+  const handleGuideComplete = () => {
+    localStorage.setItem('has_visited_summary', 'true');
+    setShowGuide(false);
+    setGuideStep(0);
+  };
+
+  // 处理跳过引导
+  const handleSkipGuide = () => {
+    localStorage.setItem('has_visited_summary', 'true');
+    setShowGuide(false);
+    setGuideStep(0);
+  };
+
+  // 下一步
+  const handleNextStep = () => {
+    if (guideStep < guideSteps.length - 1) {
+      setGuideStep(guideStep + 1);
+    } else {
+      handleGuideComplete();
+    }
+  };
+
+  // 上一步
+  const handlePrevStep = () => {
+    if (guideStep > 0) {
+      setGuideStep(guideStep - 1);
+    }
+  };
+
   return (
     <MainLayout>
+      {/* 引导页面遮罩 */}
+      {showGuide && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl border-2 border-indigo-200 dark:border-indigo-800 p-8 max-w-lg w-full shadow-2xl animate-scaleIn">
+            {/* 进度指示器 */}
+            <div className="flex gap-2 mb-6 justify-center">
+              {guideSteps.map((_, index) => (
+                <div
+                  key={index}
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    index === guideStep
+                      ? 'w-8 bg-indigo-600 dark:bg-indigo-400'
+                      : index < guideStep
+                      ? 'w-2 bg-indigo-300 dark:bg-indigo-600'
+                      : 'w-2 bg-gray-300 dark:bg-gray-600'
+                  }`}
+                />
+              ))}
+            </div>
+
+            {/* 内容区域 */}
+            <div className="text-center mb-8 min-h-[200px] flex flex-col items-center justify-center">
+              {guideSteps[guideStep].icon && (
+                <div className="text-6xl mb-4 animate-bounce">
+                  {guideSteps[guideStep].icon}
+                </div>
+              )}
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                {guideSteps[guideStep].title}
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300 text-lg leading-relaxed">
+                {guideSteps[guideStep].description}
+              </p>
+            </div>
+
+            {/* 按钮区域 */}
+            <div className="flex gap-3">
+              {guideStep > 0 && (
+                <button
+                  onClick={handlePrevStep}
+                  className="flex-1 px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                >
+                  上一步
+                </button>
+              )}
+              <button
+                onClick={handleSkipGuide}
+                className="flex-1 px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+              >
+                跳过
+              </button>
+              <button
+                onClick={handleNextStep}
+                className="flex-1 px-6 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl font-medium hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-all"
+              >
+                {guideStep === guideSteps.length - 1 ? '开始使用' : '下一步'}
+              </button>
+            </div>
+
+            {/* 步骤指示 */}
+            <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
+              {guideStep + 1} / {guideSteps.length}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="py-8">
         <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-gray-200 mb-8">
           统计
@@ -475,24 +891,34 @@ export default function SummaryPage() {
               </label>
               <div className="flex gap-2 flex-wrap">
                 <button
-                  onClick={() => setViewMode('daily')}
+                  onClick={() => setViewMode('calendar')}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                    viewMode === 'daily'
+                    viewMode === 'calendar'
                       ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
                       : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                 >
-                  📊 当天视图
+                  📅 日历视图
                 </button>
                 <button
-                  onClick={() => setViewMode('overview')}
+                  onClick={() => setViewMode('line')}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                    viewMode === 'overview'
+                    viewMode === 'line'
                       ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
                       : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                 >
-                  🥧 单日概览
+                  📊 线性统计
+                </button>
+                <button
+                  onClick={() => setViewMode('pie')}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    viewMode === 'pie'
+                      ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                      : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  🥧 扇形统计
                 </button>
                 <button
                   onClick={() => setViewMode('trend')}
@@ -507,124 +933,336 @@ export default function SummaryPage() {
               </div>
             </div>
 
-            {(viewMode === 'daily' || viewMode === 'overview') && (
+            {viewMode === 'line' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  选择日期
+                  时间范围
                 </label>
-                <select
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  {availableDates.map((date) => {
-                    const d = new Date(date);
-                    return (
-                      <option key={date} value={date}>
-                        {d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}
-                      </option>
-                    );
-                  })}
-                </select>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setLinePeriod('day')}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                      linePeriod === 'day'
+                        ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                        : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    天
+                  </button>
+                  <button
+                    onClick={() => setLinePeriod('week')}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                      linePeriod === 'week'
+                        ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                        : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    周
+                  </button>
+                  <button
+                    onClick={() => setLinePeriod('month')}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                      linePeriod === 'month'
+                        ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                        : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    月
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {viewMode === 'pie' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  时间范围
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPiePeriod('day')}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                      piePeriod === 'day'
+                        ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                        : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    天
+                  </button>
+                  <button
+                    onClick={() => setPiePeriod('week')}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                      piePeriod === 'week'
+                        ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                        : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    周
+                  </button>
+                  <button
+                    onClick={() => setPiePeriod('month')}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                      piePeriod === 'month'
+                        ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                        : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    月
+                  </button>
+                </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* 1️⃣ 当天视图 */}
-        {viewMode === 'daily' && dailyDetailData.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 mb-6 border border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              当天情绪变化详情
-            </h2>
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={dailyDetailData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis 
-                  dataKey="timeWindow" 
-                  stroke="#6b7280"
-                  style={{ fontSize: '12px' }}
-                  label={{ value: '时间窗口', position: 'insideBottom', offset: -5 }}
-                />
-                <YAxis 
-                  stroke="#6b7280"
-                  style={{ fontSize: '12px' }}
-                  label={{ value: '强度', angle: -90, position: 'insideLeft' }}
-                  domain={[0, 'dataMax + 0.5']}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                  }}
-                  formatter={(value) => {
-                    if (value == null) return ['强度: -', '']
-                    return [`强度: ${value}`, '']
-                  }}
-                  
-                  labelFormatter={(label, payload) => {
-                    if (payload && payload[0]) {
-                      return `时间: ${label} | 主导情绪: ${payload[0].payload.dominant_emotion}`;
-                    }
-                    return `时间: ${label}`;
-                  }}
-                />
-                <Legend verticalAlign="bottom" align="right" />
-                <Line 
-                  type="monotone" 
-                  dataKey="intensity" 
-                  stroke="#8b5cf6" 
-                  strokeWidth={3}
-                  dot={{ fill: '#8b5cf6', r: 5 }}
-                  activeDot={{ r: 7 }}
-                  name="情绪强度"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+        {/* 📅 日历视图 */}
+        {viewMode === 'calendar' && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 mb-6 border border-gray-200 dark:border-gray-700">
+            {/* 日历容器 - 限制最大宽度，在大屏幕上居中显示 */}
+            <div className="max-w-4xl mx-auto">
+              {/* 左右布局：小屏幕上下排列，大屏幕左右排列 */}
+              <div className="flex flex-col lg:flex-row gap-6 lg:gap-16">
+                {/* 左侧：日历主体 */}
+                <div className="flex-1">
+                  {/* 月份选择器 */}
+                  <div className="flex items-center justify-between mb-4 sm:mb-6">
+                    <button
+                      onClick={() => {
+                        const newMonth = new Date(calendarMonth);
+                        newMonth.setMonth(newMonth.getMonth() - 1);
+                        setCalendarMonth(newMonth);
+                      }}
+                      className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all text-sm"
+                    >
+                      ← 上月
+                    </button>
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
+                      {calendarMonth.getFullYear()}年 {calendarMonth.getMonth() + 1}月
+                    </h2>
+                    <button
+                      onClick={() => {
+                        const newMonth = new Date(calendarMonth);
+                        newMonth.setMonth(newMonth.getMonth() + 1);
+                        setCalendarMonth(newMonth);
+                      }}
+                      className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all text-sm"
+                    >
+                      下月 →
+                    </button>
+                  </div>
+
+                  {/* 星期标题 */}
+                  <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-1 sm:mb-2">
+                    {['日', '一', '二', '三', '四', '五', '六'].map((day) => (
+                      <div key={day} className="text-center text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 py-1 sm:py-2">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 日历网格 */}
+                  <div className="grid grid-cols-7 gap-1 sm:gap-2">
+                    {calculateCalendarData.map((day, index) => {
+                      const moodColors = {
+                        none: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700',
+                        positive: 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700',
+                        negative: 'bg-gray-300 dark:bg-gray-600 border-gray-400 dark:border-gray-500',
+                        neutral: 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700',
+                      };
+
+                      return (
+                        <div
+                          key={index}
+                          className={`aspect-square border-2 rounded-lg p-1 sm:p-2 flex flex-col items-center justify-center transition-all ${
+                            moodColors[day.moodStatus]
+                          } ${
+                            !day.isCurrentMonth ? 'opacity-30' : ''
+                          } ${
+                            day.recordCount > 0 ? 'cursor-pointer hover:scale-105' : ''
+                          }`}
+                          onClick={() => {
+                            if (day.recordCount > 0) {
+                              setSelectedDate(day.dateStr);
+                              setViewMode('line');
+                              setLinePeriod('day');
+                            }
+                          }}
+                        >
+                          <span className={`text-xs sm:text-sm font-medium ${
+                            day.isCurrentMonth 
+                              ? 'text-gray-900 dark:text-white' 
+                              : 'text-gray-400 dark:text-gray-600'
+                          }`}>
+                            {day.date.getDate()}
+                          </span>
+                          {day.recordCount > 0 && (
+                            <span className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1">
+                              {day.recordCount}条
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 右侧：颜色图例（大屏幕竖排，小屏幕横排） */}
+                <div className="lg:w-48 flex lg:flex-col justify-center lg:justify-start items-start lg:pt-16">
+                  <div className="lg:sticky lg:top-24">
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 hidden lg:block">
+                      颜色说明
+                    </h3>
+                    <div className="flex lg:flex-col gap-3 lg:gap-4 flex-wrap lg:flex-nowrap">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded border-2 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 flex-shrink-0"></div>
+                        <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">未记录</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded border-2 bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700 flex-shrink-0"></div>
+                        <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">好情绪占比大</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded border-2 bg-gray-300 dark:bg-gray-600 border-gray-400 dark:border-gray-500 flex-shrink-0"></div>
+                        <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">坏情绪占比大</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded border-2 bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700 flex-shrink-0"></div>
+                        <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">不好不坏</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* 2️⃣ 单日概览 */}
-        {viewMode === 'overview' && dailyOverviewData.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 mb-6 border border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              单日情绪占比
-            </h2>
-            <ResponsiveContainer width="100%" height={350}>
-              <PieChart>
-                <Pie
-                  data={dailyOverviewData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) =>
-                    `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
-                  }
-                  
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {dailyOverviewData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={getEmotionColor(entry.emotionTag)} 
+        {/* 📊 线性统计 */}
+        {viewMode === 'line' && (
+          <>
+            {/* 智能文案 */}
+            <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl p-4 mb-4 border border-indigo-100 dark:border-indigo-900/30">
+              <p className="text-gray-700 dark:text-gray-300 text-center">
+                💡 {lineInsightText}
+              </p>
+            </div>
+
+            {lineChartData.length > 0 ? (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 mb-6 border border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                  线性统计 - {linePeriod === 'day' ? '今天' : linePeriod === 'week' ? '本周' : '本月'}
+                </h2>
+                <ResponsiveContainer width="100%" height={350}>
+                  <LineChart data={lineChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis 
+                      dataKey="time" 
+                      stroke="#6b7280"
+                      style={{ fontSize: '12px' }}
+                      label={{ value: linePeriod === 'day' ? '时间' : '日期', position: 'insideBottom', offset: -5 }}
                     />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                  }}
-                  formatter={(value) => [`${value ?? 0} 次`, '出现次数']}
-                />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+                    <YAxis 
+                      stroke="#6b7280"
+                      style={{ fontSize: '12px' }}
+                      label={{ value: '情绪强度', angle: -90, position: 'insideLeft' }}
+                      domain={[0, 'dataMax + 0.5']}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                      }}
+                      formatter={(value) => {
+                        if (value == null) return ['强度: -', '']
+                        return [`强度: ${value}`, '']
+                      }}
+                      labelFormatter={(label, payload) => {
+                        if (payload && payload[0]) {
+                          return `${label} | 主导情绪: ${payload[0].payload.dominant_emotion} | 记录数: ${payload[0].payload.count}`;
+                        }
+                        return label;
+                      }}
+                    />
+                    <Legend verticalAlign="bottom" align="right" />
+                    <Line 
+                      type="monotone" 
+                      dataKey="intensity" 
+                      stroke="#8b5cf6" 
+                      strokeWidth={3}
+                      dot={{ fill: '#8b5cf6', r: 5 }}
+                      activeDot={{ r: 7 }}
+                      name="情绪强度"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center border border-gray-200 dark:border-gray-700 mb-6">
+                <p className="text-gray-600 dark:text-gray-400">
+                  {linePeriod === 'day' ? '今天' : linePeriod === 'week' ? '本周' : '本月'}暂无记录
+                </p>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* 🥧 扇形统计 */}
+        {viewMode === 'pie' && (
+          <>
+            {/* 智能文案 */}
+            <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl p-4 mb-4 border border-indigo-100 dark:border-indigo-900/30">
+              <p className="text-gray-700 dark:text-gray-300 text-center">
+                💡 {pieInsightText}
+              </p>
+            </div>
+
+            {pieChartData.length > 0 ? (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 mb-6 border border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                  扇形统计 - {piePeriod === 'day' ? '今天' : piePeriod === 'week' ? '本周' : '本月'}
+                </h2>
+                <ResponsiveContainer width="100%" height={350}>
+                  <PieChart>
+                    <Pie
+                      data={pieChartData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) =>
+                        `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
+                      }
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {pieChartData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={getEmotionColor(entry.emotionTag)} 
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                      }}
+                      formatter={(value) => [`${value ?? 0} 次`, '出现次数']}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center border border-gray-200 dark:border-gray-700 mb-6">
+                <p className="text-gray-600 dark:text-gray-400">
+                  {piePeriod === 'day' ? '今天' : piePeriod === 'week' ? '本周' : '本月'}暂无记录
+                </p>
+              </div>
+            )}
+          </>
         )}
 
         {/* 3️⃣ 周/月趋势 */}
@@ -801,15 +1439,9 @@ export default function SummaryPage() {
         )}
 
         {/* 空状态 */}
-        {((viewMode === 'daily' && dailyDetailData.length === 0) ||
-          (viewMode === 'overview' && dailyOverviewData.length === 0) ||
-          (viewMode === 'trend' && trendData.length === 0)) && (
+        {viewMode === 'trend' && trendData.length === 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center border border-gray-200 dark:border-gray-700">
-            <p className="text-gray-600 dark:text-gray-400">
-              {viewMode === 'daily' || viewMode === 'overview'
-                ? '所选日期暂无记录'
-                : '暂无趋势数据'}
-            </p>
+            <p className="text-gray-600 dark:text-gray-400">暂无趋势数据</p>
           </div>
         )}
       </div>

@@ -3,7 +3,21 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import MainLayout from '@/components/MainLayout';
-import { getModelName, setModelName as saveModelName, getDefaultModelName } from '@/lib/config';
+import PerformanceMonitor from '@/components/PerformanceMonitor';
+import { 
+  getModelName, 
+  setModelName as saveModelName, 
+  getDefaultModelName,
+  resetModelName as resetModelNameConfig,
+  getAIMode,
+  setAIMode,
+  getOllamaURL,
+  setOllamaURL,
+  getOllamaModel,
+  setOllamaModel,
+  type AIMode
+} from '@/lib/config';
+import { getOllamaModels, checkOllamaAvailable } from '@/lib/aiClient';
 
 // 调试页面密码（8位数）
 const DEBUG_PASSWORD = '12345678';
@@ -18,6 +32,15 @@ export default function DebugPage() {
   const [apiUrl, setApiUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [modelName, setModelName] = useState('gpt-4o-mini');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  
+  // Ollama 相关状态
+  const [aiMode, setAIModeState] = useState<AIMode>('api');
+  const [ollamaUrl, setOllamaUrlState] = useState('');
+  const [ollamaModel, setOllamaModelState] = useState('');
+  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
+  const [ollamaStatus, setOllamaStatus] = useState<'checking' | 'available' | 'unavailable'>('checking');
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
   
   useEffect(() => {
     // 检查是否已认证（从 sessionStorage）
@@ -34,6 +57,48 @@ export default function DebugPage() {
       setApiKey(localStorage.getItem('debug_api_key') || '');
       // 使用 config.ts 中的函数读取模型名称
       setModelName(getModelName());
+      
+      // 加载 AI 模式和 Ollama 配置
+      setAIModeState(getAIMode());
+      setOllamaUrlState(getOllamaURL());
+      setOllamaModelState(getOllamaModel());
+      
+      // 如果是 Ollama 模式，检测可用性并加载模型列表
+      if (getAIMode() === 'ollama') {
+        checkOllamaStatus();
+      }
+    }
+  };
+  
+  // 检测 Ollama 服务状态
+  const checkOllamaStatus = async () => {
+    setOllamaStatus('checking');
+    const available = await checkOllamaAvailable();
+    setOllamaStatus(available ? 'available' : 'unavailable');
+    if (available) {
+      loadOllamaModels();
+    }
+  };
+  
+  // 加载 Ollama 模型列表
+  const loadOllamaModels = async () => {
+    setIsLoadingModels(true);
+    try {
+      const models = await getOllamaModels();
+      setOllamaModels(models);
+    } catch (error) {
+      console.error('加载 Ollama 模型失败：', error);
+      setOllamaModels([]);
+    } finally {
+      setIsLoadingModels(false);
+    }
+  };
+  
+  // 处理 AI 模式切换
+  const handleAIModeChange = (mode: AIMode) => {
+    setAIModeState(mode);
+    if (mode === 'ollama') {
+      checkOllamaStatus();
     }
   };
 
@@ -49,22 +114,34 @@ export default function DebugPage() {
     }
   };
 
+  // 暂时保存配置（临时配置）
   const handleSave = () => {
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmSave = () => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('debug_api_url', apiUrl);
       localStorage.setItem('debug_api_key', apiKey);
       // 使用 config.ts 中的函数保存模型名称
       try {
         saveModelName(modelName);
-        alert('配置已保存！注意：这些配置仅存储在本地，不会影响服务器环境变量。');
+        setAIMode(aiMode);
+        setOllamaURL(ollamaUrl);
+        setOllamaModel(ollamaModel);
+        setShowConfirmModal(false);
+        alert('配置已保存！注意：这些配置仅存储在当前浏览器本地，不会影响服务器环境变量。');
+        loadConfig();
       } catch (error) {
         alert('保存失败：' + (error instanceof Error ? error.message : '未知错误'));
       }
     }
   };
 
+  // 永久保存配置
+
   const handleReset = () => {
-    if (confirm('确定要重置所有配置吗？')) {
+    if (confirm('确定要重置所有配置吗？这将清除所有配置（包括永久配置）并恢复为默认值。')) {
       const defaultModel = getDefaultModelName();
       setApiUrl('');
       setApiKey('');
@@ -72,14 +149,15 @@ export default function DebugPage() {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('debug_api_url');
         localStorage.removeItem('debug_api_key');
-        // 使用 config.ts 中的函数重置模型配置
+        // 使用 config.ts 中的函数重置模型配置（清除所有配置）
         try {
-          saveModelName(defaultModel);
+          resetModelNameConfig();
         } catch (error) {
           console.error('重置模型配置失败', error);
         }
       }
       alert('配置已重置');
+      loadConfig();
     }
   };
 
@@ -158,11 +236,45 @@ export default function DebugPage() {
           </div>
 
           <div className="space-y-6">
-            {/* API URL */}
+            {/* AI 模式选择 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                API URL（可选，留空使用默认）
+                AI 模式
               </label>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleAIModeChange('api')}
+                  className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                    aiMode === 'api'
+                      ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-2 border-indigo-200 dark:border-indigo-800'
+                      : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-2 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  🌐 API 模式
+                  <p className="text-xs mt-1 opacity-75">使用 OpenAI API</p>
+                </button>
+                <button
+                  onClick={() => handleAIModeChange('ollama')}
+                  className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                    aiMode === 'ollama'
+                      ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-2 border-indigo-200 dark:border-indigo-800'
+                      : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-2 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  🏠 Ollama 本地
+                  <p className="text-xs mt-1 opacity-75">使用本地模型</p>
+                </button>
+              </div>
+            </div>
+
+            {/* API 模式配置 */}
+            {aiMode === 'api' && (
+              <>
+                {/* API URL */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    API URL（可选，留空使用默认）
+                  </label>
               <input
                 type="text"
                 value={apiUrl}
@@ -175,55 +287,150 @@ export default function DebugPage() {
               </p>
             </div>
 
-            {/* API Key */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                API Key（可选，留空使用环境变量）
-              </label>
-              <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300/20 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                placeholder="输入 API Key（不会显示）"
-              />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                留空则使用环境变量 OPENAI_API_KEY
-              </p>
-            </div>
+                {/* API Key */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    API Key（可选，留空使用环境变量）
+                  </label>
+                  <input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300/20 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    placeholder="输入 API Key（不会显示）"
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    留空则使用环境变量 OPENAI_API_KEY
+                  </p>
+                </div>
 
-            {/* Model Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                模型名称
-              </label>
-              <input
-                type="text"
-                value={modelName}
-                onChange={(e) => setModelName(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300/20 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono"
-                placeholder="例如：gpt-4o-mini"
-              />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 mb-2">
-                输入要使用的模型名称（支持自定义）
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <span className="text-xs text-gray-500 dark:text-gray-400">快速选择：</span>
-                {['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo'].map((model) => (
-                  <button
-                    key={model}
-                    onClick={() => setModelName(model)}
-                    className={`px-3 py-1 text-xs rounded-lg transition-colors ${
-                      modelName === model
-                        ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
-                        : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-                    }`}
-                  >
-                    {model}
-                  </button>
-                ))}
-              </div>
-            </div>
+                {/* Model Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    模型名称
+                  </label>
+                  <input
+                    type="text"
+                    value={modelName}
+                    onChange={(e) => setModelName(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300/20 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono"
+                    placeholder="例如：gpt-4o-mini"
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 mb-2">
+                    输入要使用的模型名称（支持自定义）
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">快速选择：</span>
+                    {['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo'].map((model) => (
+                      <button
+                        key={model}
+                        onClick={() => setModelName(model)}
+                        className={`px-3 py-1 text-xs rounded-lg transition-colors ${
+                          modelName === model
+                            ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                            : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                        }`}
+                      >
+                        {model}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Ollama 模式配置 */}
+            {aiMode === 'ollama' && (
+              <>
+                {/* Ollama URL */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Ollama 服务地址
+                  </label>
+                  <input
+                    type="text"
+                    value={ollamaUrl}
+                    onChange={(e) => setOllamaUrlState(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300/20 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono"
+                    placeholder="http://localhost:11434"
+                  />
+                  <div className="mt-2 flex items-center justify-between">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      默认: http://localhost:11434
+                    </p>
+                    <button
+                      onClick={checkOllamaStatus}
+                      className="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      检测连接
+                    </button>
+                  </div>
+                  
+                  {/* 连接状态 */}
+                  <div className="mt-2">
+                    {ollamaStatus === 'checking' && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">⏳ 检测中...</p>
+                    )}
+                    {ollamaStatus === 'available' && (
+                      <p className="text-xs text-green-600 dark:text-green-400">✅ Ollama 服务可用</p>
+                    )}
+                    {ollamaStatus === 'unavailable' && (
+                      <p className="text-xs text-red-600 dark:text-red-400">❌ 无法连接到 Ollama 服务，请确保 Ollama 正在运行</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Ollama 模型选择 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Ollama 模型
+                  </label>
+                  
+                  {ollamaStatus === 'available' ? (
+                    <>
+                      {isLoadingModels ? (
+                        <div className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                          加载模型列表中...
+                        </div>
+                      ) : ollamaModels.length > 0 ? (
+                        <>
+                          <select
+                            value={ollamaModel}
+                            onChange={(e) => setOllamaModelState(e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300/20 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono"
+                          >
+                            <option value="">-- 请选择模型 --</option>
+                            {ollamaModels.map((model) => (
+                              <option key={model} value={model}>
+                                {model}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={loadOllamaModels}
+                            className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300"
+                          >
+                            🔄 刷新模型列表
+                          </button>
+                        </>
+                      ) : (
+                        <div className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300">
+                          未检测到可用模型，请先在 Ollama 中下载模型
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                      请先检测 Ollama 服务连接
+                    </div>
+                  )}
+                  
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    💡 提示：可在终端运行 <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">ollama list</code> 查看已下载的模型
+                  </p>
+                </div>
+              </>
+            )}
 
             {/* 操作按钮 */}
             <div className="flex gap-3 pt-4">
@@ -235,9 +442,9 @@ export default function DebugPage() {
               </button>
               <button
                 onClick={handleReset}
-                className="px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                className="px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
               >
-                重置
+                重置所有
               </button>
             </div>
 
@@ -249,7 +456,8 @@ export default function DebugPage() {
               <ul className="mt-2 text-xs text-blue-700 dark:text-blue-300 space-y-1 ml-4 list-disc">
                 <li>API URL 和 API Key 仅存储在浏览器本地，不会上传</li>
                 <li>模型配置会应用到所有情绪分析和总结功能</li>
-                <li>如需永久更改，请修改服务器环境变量或 .env 文件</li>
+                <li>配置仅保存在当前浏览器，清除缓存或切换设备后会恢复默认</li>
+                <li>如需永久修改默认配置，请编辑项目源代码 <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-800 rounded">src/lib/config.ts</code></li>
               </ul>
             </div>
 
@@ -257,14 +465,63 @@ export default function DebugPage() {
             <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">当前配置：</p>
               <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1 font-mono">
-                <p>API URL: {apiUrl || '(使用默认)'}</p>
-                <p>API Key: {apiKey ? '***已设置***' : '(使用环境变量)'}</p>
-                <p>Model: {modelName}</p>
+                <p>AI 模式: {aiMode === 'api' ? '🌐 API 模式' : '🏠 Ollama 本地'}</p>
+                {aiMode === 'api' ? (
+                  <>
+                    <p>API URL: {apiUrl || '(使用默认)'}</p>
+                    <p>API Key: {apiKey ? '***已设置***' : '(使用环境变量)'}</p>
+                    <p>Model: {modelName}</p>
+                  </>
+                ) : (
+                  <>
+                    <p>Ollama URL: {ollamaUrl || '(使用默认)'}</p>
+                    <p>Ollama Model: {ollamaModel || '(未选择)'}</p>
+                    <p>服务状态: {ollamaStatus === 'available' ? '✅ 可用' : ollamaStatus === 'checking' ? '⏳ 检测中' : '❌ 不可用'}</p>
+                  </>
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* 确认弹窗 */}
+      {/* 性能监控面板 */}
+      <PerformanceMonitor />
+
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black/10 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-sm w-full shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+              保存配置
+            </h3>
+            <div className="mb-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                配置将保存在当前浏览器中，清除浏览器缓存或切换设备后会恢复为默认配置。
+              </p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                模型名称：<span className="font-mono">{modelName}</span>
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowConfirmModal(false);
+                }}
+                className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleConfirmSave}
+                className="flex-1 py-2.5 rounded-xl font-medium transition-colors text-sm bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-900/40"
+              >
+                确认保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </MainLayout>
   );
 }
